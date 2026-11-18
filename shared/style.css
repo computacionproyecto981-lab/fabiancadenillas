@@ -180,7 +180,7 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .hb{position:relative;width:42px;height:42px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;background:rgba(255,255,255,.08);padding:0;transition:background .15s,transform .15s}
 .hb:hover{background:var(--accent);transform:translateY(-2px)}
 .hb:active{transform:scale(.94)}
-.hb svg{width:18px;height:18px}
+.hb svg{width:20px;height:20px}
 .hb .tip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translate(-50%,6px);opacity:0;pointer-events:none;white-space:nowrap;background:rgba(18,18,24,.92);color:#fff;font-size:12px;padding:6px 10px;border-radius:9px;transition:.18s}
 .hb:hover .tip,.hb:focus-visible .tip{opacity:1;transform:translate(-50%,0)}
 .hb:focus-visible{outline:2px solid #fff;outline-offset:2px}
