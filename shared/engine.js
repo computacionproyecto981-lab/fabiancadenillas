@@ -93,7 +93,6 @@
     G.toggleMusic = () => mBtn.onclick();
     G.toggleSfx = () => sBtn.onclick();
     const top = h('header', { class: 'top' },
-      h('a', { class: 'home', href: '../index.html', title: 'Volver al menú' }, '←'),
       h('div', { class: 'name' }, h('i', {}), cfg.title));
     /* barra inferior flotante: marcador + acciones */
     const act = (icon, label, fn) => h('button', { class: 'hb', 'aria-label': label, html: I[icon] }, h('span', { class: 'tip' }, label));
