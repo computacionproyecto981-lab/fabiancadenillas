@@ -92,8 +92,6 @@
     const dock = h('aside', { class: 'adock', 'aria-label': 'Audio' }, mBtn, sBtn);
     G.toggleMusic = () => mBtn.onclick();
     G.toggleSfx = () => sBtn.onclick();
-    const top = h('header', { class: 'top' },
-      h('div', { class: 'name' }, h('i', {}), cfg.title));
     /* barra inferior flotante: marcador + acciones */
     const act = (icon, label, fn) => h('button', { class: 'hb', 'aria-label': label, html: I[icon] }, h('span', { class: 'tip' }, label));
     const rBtn = act('restart', 'Reiniciar · R'), lBtn = act('grid', 'Niveles');
@@ -102,7 +100,7 @@
     const stage = h('main', { class: 'stage' });
     const ov = h('div', { class: 'overlay' }, h('div', { class: 'loading' }, '·  ·  ·'));
     const toastEl = h('div', { class: 'toast' });
-    app.append(top, stage, ov, toastEl, bar, dock);
+    app.append(stage, ov, toastEl, bar, dock);
     G.stage = stage;
 
     function setPaused(p) { if (G.paused === p) return; G.paused = p; A.Music.duck(p); cfg.onPause && cfg.onPause(p, G); }
