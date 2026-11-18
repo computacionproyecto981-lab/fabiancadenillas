@@ -139,21 +139,38 @@
       ], 'title');
     }
     function startMusicMenu() { if (cfg.song && !A.Music.song) A.Music.play(cfg.song, 0); }
+    /* selección de niveles: carrusel horizontal de cartas */
+    const STAR_S = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9z" fill="currentColor"/></svg>';
     function showLevels() {
       G.playing = false;
-      const p = progress(cfg.id), grid = h('div', { class: 'tiles' });
+      const p = progress(cfg.id), deck = h('div', { class: 'deck', tabindex: '0' });
+      const next = Math.min(cfg.levels, p.unlocked);
+      let curCard = null;
       for (let i = 1; i <= cfg.levels; i++) {
-        const locked = i > p.unlocked, s = p.stars[i] || 0;
-        grid.append(h('button', { class: 'tile' + (locked ? ' locked' : '') + (s ? ' done' : ''), disabled: locked, onclick: () => { A.init(); A.play('select'); start(i); } },
-          h('span', { class: 'num' }, String(i).padStart(2, '0')),
-          locked ? h('span', { class: 'lk', html: I.lock }) : h('span', { class: 'dots' }, ...[0, 1, 2].map(k => h('i', { class: k < s ? 'on' : '' })))));
+        const locked = i > p.unlocked, s = p.stars[i] || 0, cur = i === next && !locked;
+        const status = locked ? 'Bloqueado' : cur ? (s ? 'Mejorar' : 'Siguiente') : 'Superado';
+        const card = h('button', { class: 'lcard' + (locked ? ' locked' : s ? ' done' : '') + (cur ? ' cur' : ''), disabled: locked, 'aria-label': `Nivel ${i}: ${status}`, onclick: () => { A.init(); A.play('select'); start(i); } },
+          h('span', { class: 'lc-top' }, h('span', {}, 'Nivel'), locked ? h('span', { class: 'lc-lock', html: I.lock }) : null),
+          h('span', { class: 'lc-num' }, String(i).padStart(2, '0')),
+          h('span', { class: 'lc-stars' }, ...[0, 1, 2].map(k => h('i', { class: k < s ? 'on' : '', html: STAR_S }))),
+          h('span', { class: 'lc-status' }, status, cur ? h('span', { class: 'lc-go', html: PLAY }) : null));
+        if (cur) curCard = card;
+        deck.append(card);
       }
+      const scrollBy = d => { const c = deck.querySelector('.lcard'); if (c) deck.scrollBy({ left: d * (c.offsetWidth + 14), behavior: 'smooth' }); A.play('slide'); };
+      deck.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { scrollBy(1); e.preventDefault(); } if (e.key === 'ArrowLeft') { scrollBy(-1); e.preventDefault(); } });
+      deck.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { deck.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
       const doneCount = Math.min(cfg.levels, p.unlocked - 1);
       showPanel([
-        h('header', { class: 'head' }, eyebrow(cfg.title, `${doneCount} de ${cfg.levels} superados`), h('h1', { class: 'mega' }, 'Elige nivel')),
-        h('div', { class: 'side' }, grid),
-        h('footer', { class: 'foot' }, btn('← Cómo se juega', () => { A.play('back'); showTitle(); }, 'ghost'))
+        h('header', { class: 'head' }, eyebrow(cfg.title, `${doneCount} de ${cfg.levels} superados  ·  ${totalStars(cfg.id)} de ${cfg.levels * 3} estrellas`), h('h1', { class: 'mega' }, 'Elige nivel')),
+        h('div', { class: 'side' }, deck),
+        h('footer', { class: 'foot' },
+          btn('← Cómo se juega', () => { A.play('back'); showTitle(); }, 'ghost'),
+          h('div', { class: 'deck-nav' },
+            h('button', { class: 'dn', 'aria-label': 'Anteriores', onclick: () => scrollBy(-3) }, '‹'),
+            h('button', { class: 'dn', 'aria-label': 'Siguientes', onclick: () => scrollBy(3) }, '›')))
       ], 'levels-screen');
+      requestAnimationFrame(() => { if (curCard && curCard.offsetLeft + curCard.offsetWidth > deck.clientWidth * .8) deck.scrollLeft = curCard.offsetLeft - deck.clientWidth * .3; deck.focus({ preventScroll: true }); });
     }
     function start(n) {
       G.level = n; G.playing = true; G.started = true;

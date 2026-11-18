@@ -200,3 +200,37 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
   .hudbar .acts{padding-left:6px;margin-left:2px;gap:2px}
   .hb{width:36px;height:36px}
 }
+
+/* ============ selección de niveles: carrusel de cartas ============ */
+.sheet.levels-screen{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "side" "foot";grid-template-rows:auto 1fr auto;gap:clamp(18px,3vw,36px)}
+.levels-screen .head{align-self:end}
+.levels-screen .mega{font-size:clamp(48px,7vw,112px)}
+.levels-screen .side{align-self:center;min-width:0;margin-right:calc(-1 * clamp(28px,5vw,72px))}
+.deck{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:26px clamp(28px,5vw,72px) 30px 4px;scroll-padding-left:4px;scrollbar-width:none;outline:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - clamp(28px,5vw,72px)),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - clamp(28px,5vw,72px)),transparent)}
+.deck::-webkit-scrollbar{display:none}
+.lcard{flex:none;width:clamp(150px,15vw,200px);aspect-ratio:3/4;scroll-snap-align:start;border:0;border-radius:24px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;cursor:pointer;
+  color:#fff;background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);transition:transform .25s cubic-bezier(.2,1.4,.4,1),box-shadow .2s,background .2s;position:relative;overflow:hidden}
+.lcard:hover:not(.locked){transform:translateY(-8px) rotate(-1deg)}
+.lcard.done{background:rgba(255,255,255,.2)}
+.lcard.cur{background:#fff;color:var(--deep);box-shadow:0 0 0 4px rgba(255,255,255,.25),0 22px 50px rgba(0,0,0,.3);transform:translateY(-10px)}
+.lcard.cur:hover{transform:translateY(-16px) rotate(-1deg)}
+.lcard.locked{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18);color:rgba(255,255,255,.4);cursor:default}
+.lc-top{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.75}
+.lc-lock svg{width:16px;height:16px}
+.lc-num{font-size:clamp(56px,6vw,84px);font-weight:800;letter-spacing:-.06em;line-height:.9;font-variant-numeric:tabular-nums}
+.lc-stars{display:flex;gap:4px}
+.lc-stars i{width:20px;height:20px;color:rgba(255,255,255,.25)}
+.lc-stars i.on{color:#fff}
+.lcard.cur .lc-stars i{color:color-mix(in srgb,var(--deep) 22%,transparent)}
+.lcard.cur .lc-stars i.on{color:var(--deep)}
+.lcard.locked .lc-stars{visibility:hidden}
+.lc-stars svg{width:100%;height:100%;display:block}
+.lc-status{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700}
+.lc-go{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--deep);color:#fff}
+.lc-go svg{width:16px;height:16px}
+.deck-nav{display:flex;gap:8px;margin-left:auto}
+.dn{width:48px;height:48px;border-radius:50%;border:0;cursor:pointer;font-size:26px;line-height:1;color:#fff;background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.45);transition:.15s}
+.dn:hover{background:#fff;color:var(--deep)}
+@media (max-width:860px){.lcard{width:150px}.deck-nav{display:none}}
+@media (max-width:640px){.sheet{padding-top:72px}.eyebrow{white-space:normal;line-height:1.6}}
