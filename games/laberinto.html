@@ -11,6 +11,7 @@ const P = new Engine.Particles();
 let S = null, roll = null;
 const G = Engine.create({
   id: 'laberinto', title: 'Laberinto Giratorio', genre: 'Gravedad · rotación', accent: '#2f9e8f', bg: '#eaf2ef',
+  display: { font: 'Comfortaa', query: 'Comfortaa:wght@700', weight: 700, scale: 0.9, levels: 'Cambia de Mundo' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><g transform="rotate(15 32 32)"><rect x="10" y="10" width="44" height="44" rx="4"/><path d="M10 24h20M44 10v22M24 54V38h16M54 44H44"/></g><circle cx="27" cy="30" r="4" fill="currentColor"/></svg>',
   tagline: 'No mueves la bola: giras el mundo. Inclina el laberinto y deja que la gravedad haga el resto.',
   help: ['<b>← →</b> o <b>A D</b> giran el laberinto', 'También puedes <b>arrastrar</b> alrededor del centro para girarlo', 'Recoge las 3 gemas para ★★★ y llega al agujero de salida', 'Las púas te devuelven al inicio'],

@@ -73,6 +73,7 @@ function cutRope(w, r, i) { if (!r.links[i]) return false; r.links[i] = false; r
 
 const G = Engine.create({
   id: 'liana', title: 'Liana', genre: 'Física · cortar', accent: '#e8862d', bg: '#eef5e6',
+  display: { font: 'Fredoka', query: 'Fredoka:wght@700', weight: 700, scale: 0.95, levels: 'Huerto Colgante' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="14" cy="8" r="3" fill="currentColor"/><circle cx="50" cy="8" r="3" fill="currentColor"/><path d="M14 8c6 14 12 18 18 22M50 8c-4 12-10 18-18 22"/><circle cx="32" cy="36" r="9" fill="currentColor"/><path d="M18 52h28l-4 8H22z"/></svg>',
   tagline: 'Corta las lianas en el momento exacto para que la fruta se balancee, rebote y caiga en la cesta.',
   help: ['<b>Desliza</b> sobre una liana para cortarla', 'La fruta se balancea: el momento del corte decide su vuelo', 'Los <b>ganchos</b> la atrapan con una liana nueva y los <b>rebotadores</b> la desvían', 'Recoge las 3 semillas para ★★★ y evita los pinchos'],

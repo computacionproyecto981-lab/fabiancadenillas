@@ -75,6 +75,17 @@
     root.style.setProperty('--accent', cfg.accent || '#111');
     if (cfg.bg) root.style.setProperty('--gamebg', cfg.bg);
     if (cfg.dark) document.body.classList.add('dark');
+    /* tipografía propia de cada juego para los títulos grandes */
+    if (cfg.display) {
+      const d = cfg.display;
+      const l = document.createElement('link'); l.rel = 'stylesheet';
+      l.href = `https://fonts.googleapis.com/css2?family=${d.query}&display=swap`; document.head.append(l);
+      root.style.setProperty('--display-font', `'${d.font}', Inter, system-ui, sans-serif`);
+      root.style.setProperty('--display-scale', d.scale || 1);
+      root.style.setProperty('--display-weight', d.weight || 400);
+      root.style.setProperty('--display-ls', d.ls || '0em');
+      document.body.classList.add('custom-display');
+    }
     const app = document.getElementById('app');
     const hud = h('div', { class: 'hud' });
     /* control de audio flotante: barra vertical en el borde izquierdo, visible también sobre las pantallas */
@@ -157,7 +168,7 @@
       deck.addEventListener('keydown', e => { if (e.key === 'ArrowRight') { scrollBy(1); e.preventDefault(); } if (e.key === 'ArrowLeft') { scrollBy(-1); e.preventDefault(); } });
       deck.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { deck.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
       showPanel([
-        h('header', { class: 'head' }, h('h1', { class: 'mega' }, 'Escoge tu reto')),
+        h('header', { class: 'head' }, h('h1', { class: 'mega' }, (cfg.display && cfg.display.levels) || 'Escoge tu reto')),
         h('div', { class: 'side' }, deck),
         h('footer', { class: 'foot' },
           h('button', { class: 'dn back', 'aria-label': 'Volver a cómo se juega', title: 'Cómo se juega', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>', onclick: () => { A.play('back'); showTitle(); } }),

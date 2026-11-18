@@ -269,3 +269,10 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
 @media (min-width:641px){.sheet.title{padding-left:max(104px,6vw);padding-right:max(104px,6vw)}}
 .sheet.title .deco{position:fixed;left:0;top:0;right:0;bottom:0;width:auto;transform:none;display:grid;place-items:center;overflow:hidden}
 .sheet.title .deco svg{width:min(105vw,1240px,150vh);height:auto;transform:translateY(-3vh) rotate(-10deg)}
+
+/* ============ tipografía propia por juego + título de niveles centrado ============ */
+.custom-display .mega{font-family:var(--display-font);font-weight:var(--display-weight);letter-spacing:var(--display-ls);line-height:1}
+.custom-display .sheet .mega{font-size:calc(clamp(52px,9vw,148px) * var(--display-scale))}
+.custom-display .sheet.title .mega{font-size:calc(clamp(64px,12vw,184px) * var(--display-scale))}
+.custom-display .levels-screen .mega{font-size:calc(clamp(48px,7vw,112px) * var(--display-scale))}
+.levels-screen .head{justify-self:center;text-align:center;width:100%}

@@ -17,6 +17,7 @@ let S = null;
 const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
 const G = Engine.create({
   id: 'artilleria', title: 'Artillería', genre: 'Estrategia · por turnos', accent: '#5b7a3a', bg: '#eef0e6',
+  display: { font: 'Black Ops One', query: 'Black+Ops+One', weight: 400, scale: 0.82, levels: 'Frente de Batalla' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 52c10-10 18-6 26-10s16-12 26-8"/><rect x="12" y="38" width="16" height="8" rx="2" fill="currentColor"/><path d="M22 38l10-10"/><path d="M36 22c6-8 14-8 18 2" stroke-dasharray="3 5"/></svg>',
   tagline: 'Ajusta ángulo y potencia, ten en cuenta el viento y destruye los tanques rivales antes de que te alcancen.',
   help: ['<b>↑ ↓</b> ángulo · <b>← →</b> potencia · <b>Espacio</b> dispara', 'O <b>arrastra</b> desde tu tanque y suelta para disparar', '<b>1 2 3</b> cambian de arma: obús, triple y megabomba (limitadas)', 'El viento desvía los proyectiles · las explosiones abren cráteres'],

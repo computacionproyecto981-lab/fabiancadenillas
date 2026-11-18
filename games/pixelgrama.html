@@ -27,6 +27,7 @@ const runs = arr => { const r = []; let c = 0; for (const v of arr) { if (v === 
 const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 const G = Engine.create({
   id: 'pixelgrama', title: 'Pixelgrama', genre: 'Lógica · dibujo oculto', accent: '#141414', bg: '#f5f3ef',
+  display: { font: 'Press Start 2P', query: 'Press+Start+2P', weight: 400, scale: 0.5, levels: 'Lienzo Oculto' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="18" y="18" width="40" height="40" rx="3"/><path d="M18 31h40M18 45h40M31 18v40M45 18v40"/><rect x="31" y="31" width="14" height="14" fill="currentColor"/><path d="M6 24h6M6 38h6M24 6v6M38 6v6"/></svg>',
   tagline: 'Usa los números de cada fila y columna para deducir qué casillas pintar y descubre el dibujo escondido.',
   help: ['Los números indican los <b>grupos de casillas pintadas</b> seguidas, en orden', '<b>Clic</b> pinta · <b>clic derecho</b> marca una X (casilla vacía)', 'Arrastra para pintar varias casillas de una vez', 'Termina por debajo del tiempo objetivo para ★★★'],

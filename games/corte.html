@@ -13,6 +13,7 @@ let S = null;
 const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
 const G = Engine.create({
   id: 'corte', title: 'Corte Cósmico', genre: 'Deslizar · reflejos', accent: '#7c5cff', bg: '#0b0b16', dark: true,
+  display: { font: 'Syncopate', query: 'Syncopate:wght@700', weight: 700, scale: 0.72, levels: 'Lluvia de Cristal' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M22 10l12 8-4 16-14-2-4-14z"/><path d="M38 34l14 2 2 14-12 6-8-10z"/><path d="M6 58 58 6" stroke-dasharray="2 6"/></svg>',
   tagline: 'Los cristales salen disparados desde abajo: córtalos de un tajo antes de que caigan y no toques las bombas.',
   help: ['<b>Arrastra</b> el ratón o el dedo para cortar', 'Cortar varios cristales de un solo tajo da <b>combo</b>', 'Un cristal que cae sin cortar te quita una vida', 'Las <b>bombas</b> negras te quitan una vida · el cristal dorado ralentiza el tiempo'],

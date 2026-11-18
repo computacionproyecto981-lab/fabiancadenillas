@@ -15,6 +15,7 @@ let S = null;
 const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
 const G = Engine.create({
   id: 'desatasco', title: 'Desatasco', genre: 'Lógica · deslizar', accent: '#e05a47', bg: '#f1ede6',
+  display: { font: 'Righteous', query: 'Righteous', weight: 400, scale: 0.9, levels: 'Abre Paso' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="8" y="8" width="48" height="48" rx="5"/><rect x="14" y="26" width="22" height="10" rx="3" fill="currentColor"/><rect x="40" y="14" width="10" height="22" rx="3"/><rect x="14" y="42" width="30" height="8" rx="3"/><path d="M56 31h6"/></svg>',
   tagline: 'Desliza los bloques por sus carriles para abrir paso y sacar el bloque rojo por la salida.',
   help: ['<b>Arrastra</b> cada bloque: los horizontales solo se mueven a los lados y los verticales arriba y abajo', 'Saca el <b>bloque rojo</b> por la abertura de la derecha', '<b>Z</b> deshace · cada arrastre cuenta como un movimiento', 'Resuélvelo en el mínimo de movimientos para ★★★'],

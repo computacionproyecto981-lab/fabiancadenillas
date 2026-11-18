@@ -11,6 +11,7 @@ const P = new Engine.Particles();
 let S = null;
 const G = Engine.create({
   id: 'orbita', title: 'Órbita', genre: 'Un botón · espacio', accent: '#8b7bff', bg: '#0d0e1a', dark: true,
+  display: { font: 'Orbitron', query: 'Orbitron:wght@900', weight: 900, scale: 0.78, levels: 'Fijar Rumbo' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><circle cx="32" cy="32" r="10"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(-25 32 32)"/><circle cx="54" cy="22" r="3" fill="currentColor"/></svg>',
   tagline: 'Gira alrededor de cada planeta y suéltate en el momento justo para alcanzar el siguiente.',
   help: ['<b>Clic, toque o Espacio</b> para soltarte de la órbita', 'Sales disparado en línea recta, tangente a tu giro', 'Recoge el polvo estelar y esquiva los asteroides', 'Llega al planeta dorado de la cima'],

@@ -12,6 +12,7 @@ let S = null;
 const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
 const G = Engine.create({
   id: 'carril', title: 'Carril Neón', genre: 'Corredor · reflejos', accent: '#ff3d9a', bg: '#120a24', dark: true,
+  display: { font: 'Audiowide', query: 'Audiowide', weight: 400, scale: 0.8, levels: 'A Toda Velocidad' },
   glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M28 10 8 56M36 10l20 46M32 18v6M32 32v8M32 48v8"/><circle cx="44" cy="44" r="5" fill="currentColor"/></svg>',
   tagline: 'Corre por la autopista de neón, cambia de carril, salta y deslízate para esquivar todo lo que viene.',
   help: ['<b>← →</b> cambian de carril', '<b>↑ / Espacio</b> salta las barreras bajas · <b>↓</b> deslízate bajo las altas', 'En pantalla táctil: <b>desliza</b> en cualquier dirección', 'Tienes 3 escudos. Recoge orbes para ★★★'],
