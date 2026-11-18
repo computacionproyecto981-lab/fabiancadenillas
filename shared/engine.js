@@ -201,8 +201,7 @@
       showPanel([
         h('header', { class: 'head' }, eyebrow(cfg.title, `nivel ${G.level}`, 'inténtalo otra vez'), h('h1', { class: 'mega' }, msg || 'Casi')),
         h('footer', { class: 'foot' },
-          ...bigBtn(RETRY, 'Reintentar', `nivel ${G.level}`, () => start(G.level)),
-          h('div', { class: 'pills' }, btn('Niveles', () => { startMusicMenu(); showLevels(); }, 'ghost')))
+          ...bigBtn(RETRY, 'Reintentar', `nivel ${G.level}`, () => start(G.level)))
       ], 'lose');
     };
     G.hud = function (obj) {
