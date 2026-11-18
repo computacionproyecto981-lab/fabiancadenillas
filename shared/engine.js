@@ -124,16 +124,14 @@
 
     function showTitle() {
       G.playing = false;
-      const tot = totalStars(cfg.id), max = cfg.levels * 3;
+      const go = () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); };
       showPanel([
         h('header', { class: 'head' },
           eyebrow(cfg.genre, `${cfg.levels} niveles`),
           h('h1', { class: 'mega' }, cfg.title),
-          h('p', { class: 'tag' }, cfg.tagline || '')),
-        h('div', { class: 'side' }, steps()),
-        h('footer', { class: 'foot' },
-          ...bigBtn(PLAY, 'Jugar', null, () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); }),
-          h('div', { class: 'meter' }, h('i', { style: `width:${tot / max * 100}%` })))
+          h('p', { class: 'tag' }, cfg.tagline || ''),
+          h('button', { class: 'cta', onclick: go }, h('span', { class: 'cta-ic', html: PLAY }), 'Jugar')),
+        h('div', { class: 'side' }, steps())
       ], 'title');
     }
     function startMusicMenu() { if (cfg.song && !A.Music.song) A.Music.play(cfg.song, 0); }
