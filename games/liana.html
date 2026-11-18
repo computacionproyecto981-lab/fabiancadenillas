@@ -77,8 +77,7 @@ const G = Engine.create({
   tagline: 'Corta las lianas en el momento exacto para que la fruta se balancee, rebote y caiga en la cesta.',
   help: ['<b>Desliza</b> sobre una liana para cortarla', 'La fruta se balancea: el momento del corte decide su vuelo', 'Los <b>ganchos</b> la atrapan con una liana nueva y los <b>rebotadores</b> la desvían', 'Recoge las 3 semillas para ★★★ y evita los pinchos'],
   levels: LEVELS.length, maxScale: 1.15,
-  song: { bpm: 104, root: 55, scale: 'major', prog: [0, 3, 4, 0], padInst: 'padSoft', arpInst: 'marimba', arp: 'x.xx.x.xx.xx.x.x', arpOct: 5, leadInst: 'flute', leadOct: 5, leadDensity: .4,
-    kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x..x....x..x....', bassInst: 'bassPluck', bassLen: 2, seed: 109 },
+  song: { bpm: 94, root: 55, scale: 'major', prog: [0, 3, 4, 0], padInst: 'strings', arpInst: 'kalimba', arp: 'x..x..x...x..x..', arpOct: 4, leadInst: 'epiano', leadOct: 5, leadDensity: .3, kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x..x....x..x....', bassLen: 2, seed: 263 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

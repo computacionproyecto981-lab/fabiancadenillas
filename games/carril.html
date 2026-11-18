@@ -16,8 +16,7 @@ const G = Engine.create({
   tagline: 'Corre por la autopista de neón, cambia de carril, salta y deslízate para esquivar todo lo que viene.',
   help: ['<b>← →</b> cambian de carril', '<b>↑ / Espacio</b> salta las barreras bajas · <b>↓</b> deslízate bajo las altas', 'En pantalla táctil: <b>desliza</b> en cualquier dirección', 'Tienes 3 escudos. Recoge orbes para ★★★'],
   levels: NL, maxScale: 1.1,
-  song: { bpm: 124, root: 45, scale: 'minor', prog: [0, 5, 2, 6], padInst: 'padSaw', arpInst: 'pluck', arp: 'xxxxxxxxxxxxxxxx', arpOct: 5, leadInst: 'saw', leadOct: 5, leadDensity: .4,
-    kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...o.', bass: 'x.xxx.xxx.xxx.xx', bassInst: 'bassSaw', bassLen: 1, fill: true, seed: 67 },
+  song: { bpm: 110, root: 45, scale: 'minor', prog: [0, 5, 2, 6], padInst: 'strings', arpInst: 'softpluck', arp: 'x.x.x.x.x.x.x.x.', arpOct: 4, leadInst: 'warm', leadOct: 4, leadDensity: .35, kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.', bass: 'x.x.x.x.x.x.x.x.', bassLen: 1.5, seed: 239 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

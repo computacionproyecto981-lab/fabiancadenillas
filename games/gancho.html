@@ -21,8 +21,7 @@ const G = Engine.create({
   tagline: 'Lanza la garra en el ángulo justo y saca oro, gemas y sacos sorpresa antes de que acabe el tiempo.',
   help: ['<b>Clic, toque, Espacio o ↓</b> lanza la garra', 'Los objetos pesados suben más lento: elige bien', '<b>↑</b> usa dinamita para soltar una roca pesada', 'Consigue el dinero objetivo en 60 segundos'],
   levels: NL, maxScale: 1.3,
-  song: { bpm: 106, root: 55, scale: 'mixo', prog: [0, 3, 0, 4], padInst: 'padSoft', arpInst: 'banjo', arp: 'x.xx.xx.x.xx.xx.', arpOct: 4, leadInst: 'flute', leadOct: 5, leadDensity: .4,
-    kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x...5...x...5...', bassInst: 'bassPluck', bassLen: 3, seed: 41 },
+  song: { bpm: 96, root: 55, scale: 'mixo', prog: [0, 3, 0, 4], padInst: 'strings', arpInst: 'softpluck', arp: 'x.x.x.x.x.x.x.x.', arpOct: 3, leadInst: 'warm', leadOct: 4, leadDensity: .35, kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', shaker: true, bass: 'x...5...x...5...', bassLen: 3, seed: 229 },
   intensity: () => 1,
   onLevel: load,
   onPause(p) { if (whir && p) whir.set({ vol: 0 }); },
@@ -50,7 +49,7 @@ function load(n) {
   while (budget < target * 1.7) { const k = r() < .55 ? 'gold1' : 'gold2'; add(k, 1); }
   S = { n, target, items, money: 0, time: TIME, ang: 0, t: 0, hook: { state: 'swing', len: 0, item: null }, dyn: n >= 2 ? 3 : 0, boost: 1, over: false, flash: 0 };
   if (whir) whir.stop();
-  whir = G.A.loop({ type: 'triangle', f: 90, filter: 600 });
+  whir = G.A.loop({ type: 'noise', filter: 600, ftype: 'bandpass', q: 2 });
   P.clear(); hud();
 }
 function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Dinero: '$' + S.money, Objetivo: '$' + S.target, Tiempo: Math.ceil(S.time) + ' s', Dinamita: S.dyn }); }
@@ -77,7 +76,7 @@ function update(dt) {
   else if (hk.state === 'out') {
     hk.len += 560 * dt;
     const [x, y] = hookPos();
-    whir.set({ vol: .05, f: 140, filter: 900 });
+    whir.set({ vol: .06, filter: 900 });
     for (const o of S.items) if (Math.hypot(o.x - x, o.y - y) < o.r + 8) {
       hk.item = o; S.items = S.items.filter(i => i !== o); hk.state = 'in';
       G.sfx(o.k.startsWith('rock') ? 'thud' : o.k === 'gem' ? 'chime' : 'clack', { pan: G.pan(x) }); break;
@@ -86,7 +85,7 @@ function update(dt) {
   } else if (hk.state === 'in') {
     const w = hk.item ? hk.item.w : 0, sp = 620 * S.boost / (1 + w);
     hk.len -= sp * dt;
-    whir.set({ vol: .07, f: 60 + sp * .15, filter: 400 + sp });
+    whir.set({ vol: .07, filter: 300 + sp * .8 });
     if (hk.item) { const [x, y] = hookPos(); hk.item.x = x; hk.item.y = y + hk.item.r * .6; }
     if (hk.len <= 0) {
       hk.len = 0; hk.state = 'swing';

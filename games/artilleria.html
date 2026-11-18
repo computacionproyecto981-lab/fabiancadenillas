@@ -21,8 +21,7 @@ const G = Engine.create({
   tagline: 'Ajusta ángulo y potencia, ten en cuenta el viento y destruye los tanques rivales antes de que te alcancen.',
   help: ['<b>↑ ↓</b> ángulo · <b>← →</b> potencia · <b>Espacio</b> dispara', 'O <b>arrastra</b> desde tu tanque y suelta para disparar', '<b>1 2 3</b> cambian de arma: obús, triple y megabomba (limitadas)', 'El viento desvía los proyectiles · las explosiones abren cráteres'],
   levels: NL, maxScale: 1.3,
-  song: { bpm: 96, root: 50, scale: 'harm', prog: [0, 3, 4, 0], padInst: 'padSaw', arpInst: 'pluck', arp: 'x..x..x.x..x..x.', arpOct: 4, leadInst: 'lead', leadOct: 5, leadDensity: .35,
-    kick: 'x.....x.x.......', snare: '....x..x....x.xx', hat: 'x.x.x.x.x.x.x.x.', bass: 'x..x..x.x..x..x.', bassInst: 'bassPluck', bassLen: 2, fill: true, seed: 83 },
+  song: { bpm: 80, root: 48, scale: 'harm', prog: [0, 5, 3, 4], padInst: 'strings', arpInst: 'softpluck', arp: 'x.....x.....x...', arpOct: 3, leadInst: 'warm', leadOct: 4, leadDensity: .3, kick: 'x.......x.......', snare: '............x...', hat: '', bass: 'x.......x.......', bassLen: 6, fill: true, seed: 251 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

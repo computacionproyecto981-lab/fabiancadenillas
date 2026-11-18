@@ -18,7 +18,9 @@
         this.master = c.createGain(); this.master.gain.value = .85;
         this.master.connect(comp); comp.connect(c.destination);
         this.musicBus = c.createGain(); this.musicBus.gain.value = this.musicOn ? .5 : 0; this.musicBus.connect(this.master);
-        this.duckGain = c.createGain(); this.duckGain.gain.value = 1; this.duckGain.connect(this.musicBus);
+        this.duckGain = c.createGain(); this.duckGain.gain.value = 1;
+        this.musicFilter = c.createBiquadFilter(); this.musicFilter.type = 'lowpass'; this.musicFilter.frequency.value = 3600; this.musicFilter.Q.value = .4;
+        this.duckGain.connect(this.musicFilter); this.musicFilter.connect(this.musicBus);
         this.sfxBus = c.createGain(); this.sfxBus.gain.value = this.sfxOn ? .9 : 0; this.sfxBus.connect(this.master);
         this.verb = c.createConvolver(); this.verb.buffer = this._ir(2.4);
         const vg = c.createGain(); vg.gain.value = .32; this.verb.connect(vg); vg.connect(this.master);
@@ -78,9 +80,15 @@
 
   /* ---------------- instrumentos (música y efectos) ---------------- */
   const INST = {
+    epiano: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: Math.max(.5, d * 1.2), vol: v, attack: .006 }); voice({ ...x, t, f: f * 2, type: 'sine', dur: .3, vol: v * .16, attack: .004 }); voice({ ...x, t, f: f * 3.01, type: 'sine', dur: .1, vol: v * .05 }); },
+    warm: (t, f, d, v, x) => { for (const dt of [-6, 6]) voice({ ...x, t, f, type: 'triangle', detune: dt, dur: d * .9, vol: v * .45, filter: 1500, attack: .05, hold: true, release: .2, vib: f * .005 }); },
+    strings: (t, f, d, v, x) => { for (const dt of [-8, 0, 8]) voice({ ...x, t, f, type: 'sawtooth', detune: dt, dur: d, vol: v * .11, filter: 650, q: .3, attack: .6, hold: true, release: 1 }); },
+    softpluck: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'triangle', dur: .32, vol: v, filter: f * 2.2, fslide: f * 1.1, attack: .008 }); },
+    kalimba: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: .7, vol: v, attack: .005 }); voice({ ...x, t, f: f * 4.2, type: 'sine', dur: .035, vol: v * .1 }); },
+    bassWarm: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: d * .9, vol: v, attack: .012, hold: true, release: .1 }); voice({ ...x, t, f, type: 'triangle', dur: d * .6, vol: v * .22, filter: 380, attack: .01 }); },
     pluck: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'triangle', dur: Math.min(d, .5), vol: v, filter: f * 5, fslide: f * 1.5 }); voice({ ...x, t, f: f * 2, type: 'sine', dur: .08, vol: v * .3 }); },
     marimba: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: .35, vol: v }); voice({ ...x, t, f: f * 4, type: 'sine', dur: .05, vol: v * .35 }); },
-    bell: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: 1.2, vol: v }); voice({ ...x, t, f: f * 2.76, type: 'sine', dur: .4, vol: v * .35 }); voice({ ...x, t, f: f * 5.4, type: 'sine', dur: .15, vol: v * .15 }); },
+    bell: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'sine', dur: 1.2, vol: v }); voice({ ...x, t, f: f * 2.76, type: 'sine', dur: .3, vol: v * .18 }); },
     piano: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'triangle', dur: Math.max(.4, d * 1.4), vol: v, filter: 2600, fslide: 900 }); voice({ ...x, t, f: f * 2, type: 'sine', dur: .25, vol: v * .25 }); },
     lead: (t, f, d, v, x) => { voice({ ...x, t, f, type: 'square', dur: d * .9, vol: v * .55, filter: 2400, q: 2, vib: f * .012, attack: .01, hold: true, release: .08 }); },
     saw: (t, f, d, v, x) => { for (const dt of [-7, 7]) voice({ ...x, t, f, type: 'sawtooth', detune: dt, dur: d * .9, vol: v * .4, filter: 2200, fslide: 1200, attack: .01, hold: true, release: .1 }); },
@@ -110,7 +118,7 @@
     thud: o => { voice({ ...o, f: 110 * o.p, slide: 40, type: 'sine', dur: .2, vol: .45 * o.v }); voice({ ...o, type: 'noise', dur: .08, vol: .18 * o.v, filter: 900 * o.p }); },
     wood: o => { voice({ ...o, f: 520 * o.p, type: 'sine', dur: .05, vol: .25 * o.v }); voice({ ...o, type: 'noise', dur: .03, vol: .12 * o.v, filter: 2200 * o.p, ftype: 'bandpass', q: 4 }); },
     slide: o => voice({ ...o, type: 'noise', dur: .1, vol: .1 * o.v, filter: 700 * o.p, fslide: 1400 * o.p, ftype: 'bandpass', q: 1.5, attack: .02 }),
-    coin: o => { voice({ ...o, f: 988 * o.p, type: 'square', dur: .07, vol: .06 * o.v, filter: 5000 }); voice({ ...o, t: A.now() + .07, f: 1319 * o.p, type: 'square', dur: .18, vol: .06 * o.v, filter: 5000, verb: .15 }); },
+    coin: o => { voice({ ...o, f: 988 * o.p, type: 'triangle', dur: .07, vol: .1 * o.v, filter: 3000 }); voice({ ...o, t: A.now() + .07, f: 1319 * o.p, type: 'triangle', dur: .2, vol: .09 * o.v, filter: 3000, verb: .2 }); },
     pickup: o => [0, 4, 7, 12].forEach((s, i) => voice({ ...o, t: A.now() + i * .035, f: 880 * o.p * Math.pow(2, s / 12), type: 'sine', dur: .12, vol: .1 * o.v, verb: .25 })),
     sparkle: o => { for (let i = 0; i < 5; i++) voice({ ...o, t: A.now() + i * .03, f: (1800 + Math.random() * 2400) * o.p, type: 'sine', dur: .09, vol: .05 * o.v, verb: .4 }); },
     chime: o => INST.bell(A.now(), 1047 * o.p, .5, .12 * o.v, { ...o, verb: .35 }),
@@ -126,14 +134,14 @@
     laser: o => voice({ ...o, f: 1600 * o.p, slide: 180 * o.p, type: 'sawtooth', dur: .16, vol: .07 * o.v, filter: 3000 }),
     boom: o => { voice({ ...o, f: 90 * o.p, slide: 30, type: 'sine', dur: .5, vol: .55 * o.v }); voice({ ...o, type: 'noise', dur: .5, vol: .35 * o.v, filter: 1400, fslide: 120, verb: .3 }); },
     explosion: o => { voice({ ...o, f: 70 * o.p, slide: 25, type: 'sine', dur: .8, vol: .6 * o.v }); voice({ ...o, type: 'noise', dur: .9, vol: .45 * o.v, filter: 2400 * o.p, fslide: 90, verb: .45 }); voice({ ...o, type: 'noise', dur: .08, vol: .3 * o.v, filter: 5000, ftype: 'highpass' }); },
-    whistle: o => voice({ ...o, f: 1800 * o.p, slide: 500 * o.p, type: 'sine', dur: o.d || .9, vol: .05 * o.v, vib: 15, attack: .1 }),
+    whistle: o => voice({ ...o, type: 'noise', dur: o.d || .9, vol: .06 * o.v, filter: 2200 * o.p, fslide: 700 * o.p, ftype: 'bandpass', q: 6, attack: .1 }),
     horn: o => { for (const f of [220, 277, 330]) voice({ ...o, f: f * o.p, type: 'sawtooth', dur: .9, vol: .07 * o.v, filter: 1600, attack: .03, hold: true, release: .3, verb: .2 }); },
     crowd: o => voice({ ...o, type: 'noise', dur: 1.6, vol: .14 * o.v, filter: 900, ftype: 'bandpass', q: .6, attack: .25, verb: .3 }),
     cash: o => { voice({ ...o, type: 'noise', dur: .03, vol: .2 * o.v, filter: 6000, ftype: 'highpass' }); INST.bell(A.now() + .04, 1568 * o.p, .4, .1 * o.v, { ...o, verb: .2 }); INST.bell(A.now() + .1, 2093 * o.p, .4, .08 * o.v, { ...o, verb: .2 }); },
-    error: o => { voice({ ...o, f: 196 * o.p, type: 'square', dur: .1, vol: .07 * o.v, filter: 1500 }); voice({ ...o, t: A.now() + .11, f: 147 * o.p, type: 'square', dur: .16, vol: .07 * o.v, filter: 1500 }); },
-    tick: o => voice({ ...o, f: 2200 * o.p, type: 'square', dur: .015, vol: .03 * o.v }),
-    beep: o => voice({ ...o, f: 880 * o.p, type: 'square', dur: .12, vol: .07 * o.v, filter: 3000 }),
-    go: o => voice({ ...o, f: 1760 * o.p, type: 'square', dur: .35, vol: .08 * o.v, filter: 4000, verb: .2 }),
+    error: o => { voice({ ...o, f: 196 * o.p, type: 'triangle', dur: .1, vol: .12 * o.v, filter: 1000 }); voice({ ...o, t: A.now() + .11, f: 147 * o.p, type: 'triangle', dur: .16, vol: .12 * o.v, filter: 1000 }); },
+    tick: o => voice({ ...o, f: 1200 * o.p, type: 'sine', dur: .03, vol: .05 * o.v }),
+    beep: o => voice({ ...o, f: 660 * o.p, type: 'triangle', dur: .14, vol: .1 * o.v, filter: 2000 }),
+    go: o => voice({ ...o, f: 990 * o.p, type: 'triangle', dur: .4, vol: .12 * o.v, filter: 2500, verb: .25 }),
     star: o => { INST.bell(A.now(), 1568 * o.p, .6, .12 * o.v, { ...o, verb: .4 }); SFX.sparkle(o); },
     win: o => { const n = [0, 4, 7, 12, 16]; n.forEach((s, i) => INST.bell(A.now() + i * .09, 523 * Math.pow(2, s / 12), .8, .11 * o.v, { verb: .4 })); for (const s of [0, 4, 7]) voice({ t: A.now() + .45, f: 262 * Math.pow(2, s / 12), type: 'triangle', dur: 1, vol: .08 * o.v, attack: .05, hold: true, release: .8, verb: .4 }); },
     lose: o => { [7, 3, 0, -5].forEach((s, i) => voice({ t: A.now() + i * .16, f: 330 * Math.pow(2, s / 12), slide: 320 * Math.pow(2, (s - 1) / 12), type: 'sawtooth', dur: .26, vol: .07 * o.v, filter: 1300, verb: .3 })); },
@@ -247,29 +255,29 @@
       const at = (p, k) => p && p[k % p.length] !== '.' && p[k % p.length];
       // batería
       if (I >= 1 && !breakdown) {
-        if (at(s.kick, st)) INST.kick(t, .9, X);
-        if (at(s.snare, st)) INST[s.clap ? 'clap' : 'snare'](t, .7, X);
+        if (at(s.kick, st)) INST.kick(t, .65, X);
+        if (at(s.snare, st)) INST[s.clap ? 'clap' : 'snare'](t, .38, X);
         const h = at(s.hat, st);
-        if (h) INST[h === 'o' ? 'ohat' : s.shaker ? 'shaker' : 'hat'](t, .8, X);
+        if (h) INST[h === 'o' ? 'ohat' : s.shaker ? 'shaker' : 'hat'](t, .4, X);
         if (I >= 2 && s.fill && bar === s.bars - 1 && st >= 12) INST.tom(t, .6, { dest: D, pan: (st - 13.5) / 3 });
       }
       // bajo
       const b = at(s.bass, st);
       if (b && (I >= 1 || st % 8 === 0)) {
         const n = s.note(b === '5' ? deg + 4 : deg, 2) + (b === 'o' ? 12 : 0);
-        INST[s.bassInst || 'bassSub'](t, mtof(n), sx * (s.bassLen || 2), .32, X);
+        INST[s.bassInst || 'bassWarm'](t, mtof(n), sx * (s.bassLen || 2), .3, X);
       }
       // colchón armónico
-      if (st === 0 && s.pad !== false) for (const d of chord) INST[s.padInst || 'padSoft'](t, mtof(s.note(d, 4)), sx * 15, .1, { dest: D, verb: .3 });
+      if (st === 0 && s.pad !== false) for (const d of chord) INST[s.padInst || 'strings'](t, mtof(s.note(d, 3)), sx * 15, .1, { dest: D, verb: .35 });
       // arpegio
       if (I >= 1 && at(s.arp, st)) {
         const k = Math.floor(i / 1) % 4, d = chord[[0, 1, 2, 1][k]] + (k === 3 ? 0 : 0);
-        INST[s.arpInst || 'pluck'](t, mtof(s.note(d, s.arpOct || 5)), sx * 2, .09, { dest: D, verb: .2, pan: ((i % 4) - 1.5) * .25 });
+        INST[s.arpInst || 'softpluck'](t, mtof(s.note(d, s.arpOct || 4)), sx * 2, .065, { dest: D, verb: .25, pan: ((i % 4) - 1.5) * .25 });
       }
       // melodía
       if ((I >= 2 || s.leadAlways) && !breakdown) {
         const pos = i % s.total;
-        for (const m of s.melody) if (m.st === pos) INST[s.leadInst || 'lead'](t, mtof(s.note(m.deg + (s.leadShift || 0), s.leadOct || 5)), sx * m.len, .13, { dest: D, verb: .25 });
+        for (const m of s.melody) if (m.st === pos) INST[s.leadInst || 'warm'](t, mtof(s.note(m.deg + (s.leadShift || 0), s.leadOct || 4)), sx * m.len, .1, { dest: D, verb: .3 });
       }
     }
   };

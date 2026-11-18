@@ -31,8 +31,7 @@ const G = Engine.create({
   tagline: 'Usa los números de cada fila y columna para deducir qué casillas pintar y descubre el dibujo escondido.',
   help: ['Los números indican los <b>grupos de casillas pintadas</b> seguidas, en orden', '<b>Clic</b> pinta · <b>clic derecho</b> marca una X (casilla vacía)', 'Arrastra para pintar varias casillas de una vez', 'Termina por debajo del tiempo objetivo para ★★★'],
   levels: PICS.length, maxScale: 1.4,
-  song: { bpm: 72, root: 60, scale: 'major', prog: [0, 5, 3, 4], padInst: 'padSoft', arpInst: 'bell', arp: 'x...x...x...x...', arpOct: 5, leadInst: 'piano', leadOct: 5, leadDensity: .3, leadAlways: true,
-    kick: '', snare: '', hat: '', bass: 'x.......x.......', bassInst: 'bassSub', bassLen: 7, seed: 97 },
+  song: { bpm: 64, root: 60, scale: 'major', prog: [0, 5, 3, 4], padInst: 'strings', arpInst: 'epiano', arp: 'x...x...x...x...', arpOct: 4, leadInst: 'kalimba', leadOct: 5, leadDensity: .25, leadAlways: true, kick: '', snare: '', hat: '', bass: 'x.......x.......', bassLen: 7, seed: 257 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

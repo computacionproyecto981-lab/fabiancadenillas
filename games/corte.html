@@ -17,8 +17,7 @@ const G = Engine.create({
   tagline: 'Los cristales salen disparados desde abajo: córtalos de un tajo antes de que caigan y no toques las bombas.',
   help: ['<b>Arrastra</b> el ratón o el dedo para cortar', 'Cortar varios cristales de un solo tajo da <b>combo</b>', 'Un cristal que cae sin cortar te quita una vida', 'Las <b>bombas</b> negras te quitan una vida · el cristal dorado ralentiza el tiempo'],
   levels: NL, maxScale: 1.3,
-  song: { bpm: 138, root: 50, scale: 'minor', prog: [0, 5, 3, 4], padInst: 'padSaw', arpInst: 'pluck', arp: 'x.xxx.xxx.xxx.xx', arpOct: 5, leadInst: 'saw', leadOct: 5, leadDensity: .45,
-    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: 'xxoxxxoxxxoxxxox', bass: '.x.x.x.x.x.x.x.x', bassInst: 'bassSaw', bassLen: 1, fill: true, seed: 127 },
+  song: { bpm: 116, root: 50, scale: 'minor', prog: [0, 5, 3, 4], padInst: 'strings', arpInst: 'softpluck', arp: 'x.x.x.x.x.x.x.x.', arpOct: 4, leadInst: 'warm', leadOct: 4, leadDensity: .35, kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '..x...x...x...x.', bass: '.x.x.x.x.x.x.x.x', bassLen: 1.5, seed: 269 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

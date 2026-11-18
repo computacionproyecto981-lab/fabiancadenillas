@@ -17,8 +17,7 @@ const G = Engine.create({
   tagline: 'Golpea el disco con tu mazo, rebota en las bandas y marca antes que la máquina. Primero en llegar a 5 gana.',
   help: ['Mueve el <b>ratón</b> o el <b>dedo</b>: tu mazo lo sigue en tu mitad de la pista', 'Golpea el disco con velocidad para tiros más fuertes', 'Usa los rebotes en las bandas para engañar al rival', 'Gana por mucha diferencia para ★★★'],
   levels: NL, maxScale: 1.05,
-  song: { bpm: 128, root: 52, scale: 'major', prog: [0, 4, 5, 3], padInst: 'padSaw', arpInst: 'pluck', arp: 'x.x.x.x.x.x.x.x.', arpOct: 5, leadInst: 'lead', leadOct: 5, leadDensity: .4,
-    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '..x...x...x...x.', bass: 'xoxoxoxoxoxoxoxo', bassInst: 'bassSaw', bassLen: 1, fill: true, seed: 71 },
+  song: { bpm: 112, root: 52, scale: 'mixo', prog: [0, 3, 0, 4], padInst: 'strings', arpInst: 'epiano', arp: '..x...x...x..x..', arpOct: 4, leadInst: 'warm', leadOct: 4, leadDensity: .35, kick: 'x..x....x.x.....', snare: '....x.......x...', clap: true, hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x..x..x...x.x...', bassLen: 2, seed: 241 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

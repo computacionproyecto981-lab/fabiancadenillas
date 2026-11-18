@@ -19,8 +19,7 @@ const G = Engine.create({
   tagline: 'Desliza los bloques por sus carriles para abrir paso y sacar el bloque rojo por la salida.',
   help: ['<b>Arrastra</b> cada bloque: los horizontales solo se mueven a los lados y los verticales arriba y abajo', 'Saca el <b>bloque rojo</b> por la abertura de la derecha', '<b>Z</b> deshace · cada arrastre cuenta como un movimiento', 'Resuélvelo en el mínimo de movimientos para ★★★'],
   levels: LEVELS.length,
-  song: { bpm: 90, root: 50, scale: 'dorian', prog: [0, 3, 6, 2], padInst: 'padSoft', arpInst: 'piano', arp: 'x..x..x...x..x..', arpOct: 4, leadInst: 'piano', leadOct: 5, leadDensity: .32, swing: .25,
-    kick: 'x.........x.....', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', shaker: true, bass: 'x...x...x...x.5.', bassInst: 'bassSub', bassLen: 3, seed: 53 },
+  song: { bpm: 84, root: 50, scale: 'dorian', prog: [0, 3, 6, 2], padInst: 'strings', arpInst: 'epiano', arp: 'x..x......x..x..', arpOct: 4, leadInst: 'epiano', leadOct: 4, leadDensity: .28, swing: .28, kick: 'x.........x.....', snare: '....x.......x...', hat: 'x.xx.xx.x.xx.xx.', shaker: true, bass: 'x...x...x...x...', bassLen: 3, seed: 233 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {

@@ -16,8 +16,7 @@ const G = Engine.create({
   tagline: 'Suelta cada bloque justo encima del anterior. Lo que sobresale, se corta. ¿Hasta dónde llegarás?',
   help: ['<b>Clic, toque o Espacio</b> para soltar el bloque', 'La parte que sobresale cae al vacío', 'Un encaje <b>perfecto</b> no corta nada; tres seguidos agrandan el bloque', 'Alcanza la altura objetivo; los perfectos dan estrellas'],
   levels: NL, maxScale: 1.1,
-  song: { bpm: 112, root: 53, scale: 'major', prog: [0, 4, 5, 3], padInst: 'padSoft', arpInst: 'marimba', arp: 'x.x.x.x.x.x.x.xx', arpOct: 5, leadInst: 'piano', leadOct: 5, leadDensity: .45,
-    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '..x...x...x...x.', bass: 'x..x..x.x..x..x.', bassInst: 'bassPluck', bassLen: 2, seed: 23 },
+  song: { bpm: 98, root: 53, scale: 'major', prog: [0, 5, 3, 4], padInst: 'strings', arpInst: 'epiano', arp: 'x...x.x...x.x...', arpOct: 4, leadInst: 'kalimba', leadOct: 5, leadDensity: .35, kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.', shaker: true, bass: 'x.....x.x.......', bassLen: 3, seed: 223 },
   intensity: () => 1,
   onLevel: load,
   onReady(g) {
