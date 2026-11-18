@@ -195,8 +195,7 @@
         h('header', { class: 'head' }, eyebrow(cfg.title, last ? 'juego completado' : 'nivel superado'), h('h1', { class: 'mega' }, last ? '¡Completo!' : `Nivel ${G.level}`), st),
         h('div', { class: 'side' }, figures(stats)),
         h('footer', { class: 'foot' },
-          ...(last ? bigBtn(RETRY, 'Repetir', `nivel ${G.level}`, () => start(G.level)) : bigBtn(PLAY, 'Siguiente', `nivel ${G.level + 1}`, () => start(G.level + 1))),
-          h('div', { class: 'pills' }, last ? null : btn('Repetir', () => start(G.level), 'ghost'), btn('Niveles', () => { startMusicMenu(); showLevels(); }, 'ghost')))
+          ...(last ? bigBtn(RETRY, 'Repetir', `nivel ${G.level}`, () => start(G.level)) : bigBtn(PLAY, 'Siguiente', `nivel ${G.level + 1}`, () => start(G.level + 1))))
       ], 'win');
     };
     G.lose = function (msg, stats) {
