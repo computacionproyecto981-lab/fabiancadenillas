@@ -97,37 +97,54 @@
     G.stage = stage;
 
     function setPaused(p) { if (G.paused === p) return; G.paused = p; A.Music.duck(p); cfg.onPause && cfg.onPause(p, G); }
-    function showPanel(children, cls) { ov.innerHTML = ''; ov.append(h('div', { class: 'card ' + (cls || '') }, ...children)); ov.classList.remove('hidden'); setPaused(true); }
+    /* ---- pantallas a sangre: inicio, niveles, pausa, victoria y derrota ---- */
+    const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></svg>';
+    const RETRY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/></svg>';
+    const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9z" fill="currentColor"/></svg>';
+    function showPanel(children, cls) {
+      ov.innerHTML = '';
+      ov.append(h('section', { class: 'sheet ' + (cls || '') }, h('div', { class: 'deco', html: cfg.glyph || '' }), ...children));
+      ov.classList.remove('hidden'); setPaused(true);
+    }
     function hidePanel() { ov.classList.add('hidden'); setPaused(false); }
     const panelOpen = () => !ov.classList.contains('hidden');
-    const help = () => h('ul', { class: 'help' }, ...(cfg.help || []).map(t => h('li', { html: t })));
-    const statsBlock = s => h('dl', { class: 'stats' }, ...(s || []).flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, String(v))]));
+    const steps = () => h('ol', { class: 'steps' }, ...(cfg.help || []).map((t, i) => h('li', {}, h('span', { class: 'n' }, String(i + 1).padStart(2, '0')), h('p', { html: t }))));
+    const figures = s => h('div', { class: 'figures' }, ...(s || []).map(([k, v]) => h('div', {}, h('b', {}, String(v)), h('span', {}, k))));
+    const eyebrow = (...parts) => h('p', { class: 'eyebrow' }, parts.filter(Boolean).join('  /  '));
+    const btn = (label, fn, kind) => h('button', { class: 'pill ' + (kind || ''), onclick: fn }, label);
+    const bigBtn = (icon, title, sub, fn) => [h('button', { class: 'play', title, html: icon, onclick: fn }), h('div', { class: 'playtxt' }, h('b', {}, title), h('span', {}, sub))];
     const startMusic = () => { if (cfg.song) A.Music.play(cfg.song, cfg.intensity ? cfg.intensity(G.level) : 1); };
 
     function showTitle() {
       G.playing = false;
+      const tot = totalStars(cfg.id), max = cfg.levels * 3;
       showPanel([
-        h('div', { class: 'glyph', html: cfg.glyph || '' }),
-        h('p', { class: 'kicker' }, cfg.genre || ''),
-        h('h1', {}, cfg.title),
-        h('p', { class: 'lead' }, cfg.tagline || ''),
-        help(),
-        h('div', { class: 'row' },
-          h('button', { class: 'btn primary', onclick: () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); } }, 'Jugar'),
-          h('span', { class: 'meta' }, `★ ${totalStars(cfg.id)}/${cfg.levels * 3}`))
+        h('header', { class: 'head' },
+          eyebrow(cfg.genre, `${cfg.levels} niveles`),
+          h('h1', { class: 'mega' }, cfg.title),
+          h('p', { class: 'tag' }, cfg.tagline || '')),
+        h('div', { class: 'side' }, h('p', { class: 'label' }, 'Cómo se juega'), steps()),
+        h('footer', { class: 'foot' },
+          ...bigBtn(PLAY, 'Jugar', `${tot} de ${max} estrellas`, () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); }),
+          h('div', { class: 'meter' }, h('i', { style: `width:${tot / max * 100}%` })))
       ], 'title');
     }
     function startMusicMenu() { if (cfg.song && !A.Music.song) A.Music.play(cfg.song, 0); }
     function showLevels() {
       G.playing = false;
-      const p = progress(cfg.id), grid = h('div', { class: 'levels' });
+      const p = progress(cfg.id), grid = h('div', { class: 'tiles' });
       for (let i = 1; i <= cfg.levels; i++) {
         const locked = i > p.unlocked, s = p.stars[i] || 0;
-        grid.append(h('button', { class: 'lv' + (locked ? ' locked' : '') + (s ? ' done' : ''), disabled: locked, onclick: () => { A.init(); A.play('select'); start(i); } },
-          locked ? h('span', { html: I.lock }) : h('b', {}, String(i)), h('small', {}, locked ? '' : '★'.repeat(s) + '·'.repeat(3 - s))));
+        grid.append(h('button', { class: 'tile' + (locked ? ' locked' : '') + (s ? ' done' : ''), disabled: locked, onclick: () => { A.init(); A.play('select'); start(i); } },
+          h('span', { class: 'num' }, String(i).padStart(2, '0')),
+          locked ? h('span', { class: 'lk', html: I.lock }) : h('span', { class: 'dots' }, ...[0, 1, 2].map(k => h('i', { class: k < s ? 'on' : '' })))));
       }
-      showPanel([h('p', { class: 'kicker' }, cfg.title), h('h2', {}, 'Niveles'), grid,
-        h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { A.play('back'); showTitle(); } }, 'Cómo se juega'))]);
+      const doneCount = Math.min(cfg.levels, p.unlocked - 1);
+      showPanel([
+        h('header', { class: 'head' }, eyebrow(cfg.title, `${doneCount} de ${cfg.levels} superados`), h('h1', { class: 'mega' }, 'Elige nivel')),
+        h('div', { class: 'side' }, grid),
+        h('footer', { class: 'foot' }, btn('← Cómo se juega', () => { A.play('back'); showTitle(); }, 'ghost'))
+      ], 'levels-screen');
     }
     function start(n) {
       G.level = n; G.playing = true; G.started = true;
@@ -140,11 +157,13 @@
     function pause() {
       if (!G.playing || panelOpen()) return;
       A.play('click');
-      showPanel([h('p', { class: 'kicker' }, `${cfg.title} · nivel ${G.level}`), h('h2', {}, 'Pausa'), help(),
-        h('div', { class: 'row' },
-          h('button', { class: 'btn primary', onclick: () => { A.play('select'); hidePanel(); } }, 'Continuar'),
-          h('button', { class: 'btn ghost', onclick: () => start(G.level) }, 'Reiniciar'),
-          h('button', { class: 'btn ghost', onclick: () => showLevels() }, 'Niveles'))]);
+      showPanel([
+        h('header', { class: 'head' }, eyebrow(cfg.title, `nivel ${G.level}`), h('h1', { class: 'mega' }, 'Pausa')),
+        h('div', { class: 'side' }, h('p', { class: 'label' }, 'Recuerda'), steps()),
+        h('footer', { class: 'foot' },
+          ...bigBtn(PLAY, 'Continuar', 'o pulsa Esc', () => { A.play('select'); hidePanel(); }),
+          h('div', { class: 'pills' }, btn('Reiniciar', () => start(G.level), 'ghost'), btn('Niveles', () => showLevels(), 'ghost')))
+      ], 'pause');
     }
     G.win = function (stars, stats, score) {
       if (!G.playing) return;
@@ -152,21 +171,30 @@
       record(cfg.id, G.level, stars, score);
       A.Music.stop(true); A.play('win');
       const last = G.level >= cfg.levels;
-      const st = h('div', { class: 'stars' });
-      for (let i = 0; i < 3; i++) { const s = h('span', { class: i < stars ? 'on' : '' }, '★'); s.style.animationDelay = (.3 + i * .2) + 's'; st.append(s); if (i < stars) setTimeout(() => A.play('star', { pitch: 1 + i * .12 }), 600 + i * 200); }
-      showPanel([h('p', { class: 'kicker' }, last ? 'Juego completado' : 'Nivel superado'), h('h1', {}, last ? '¡Lo lograste!' : `Nivel ${G.level}`), st, statsBlock(stats),
-        h('div', { class: 'row' },
-          !last ? h('button', { class: 'btn primary', onclick: () => start(G.level + 1) }, 'Siguiente') : null,
-          h('button', { class: last ? 'btn primary' : 'btn ghost', onclick: () => start(G.level) }, 'Repetir'),
-          h('button', { class: 'btn ghost', onclick: () => { startMusicMenu(); showLevels(); } }, 'Niveles'))], 'win');
+      const st = h('div', { class: 'bigstars' });
+      for (let i = 0; i < 3; i++) {
+        const s = h('span', { class: i < stars ? 'on' : '', html: STAR });
+        s.style.animationDelay = (.25 + i * .18) + 's'; st.append(s);
+        if (i < stars) setTimeout(() => A.play('star', { pitch: 1 + i * .12 }), 550 + i * 180);
+      }
+      showPanel([
+        h('header', { class: 'head' }, eyebrow(cfg.title, last ? 'juego completado' : 'nivel superado'), h('h1', { class: 'mega' }, last ? '¡Completo!' : `Nivel ${G.level}`), st),
+        h('div', { class: 'side' }, figures(stats)),
+        h('footer', { class: 'foot' },
+          ...(last ? bigBtn(RETRY, 'Repetir', `nivel ${G.level}`, () => start(G.level)) : bigBtn(PLAY, 'Siguiente', `nivel ${G.level + 1}`, () => start(G.level + 1))),
+          h('div', { class: 'pills' }, last ? null : btn('Repetir', () => start(G.level), 'ghost'), btn('Niveles', () => { startMusicMenu(); showLevels(); }, 'ghost')))
+      ], 'win');
     };
     G.lose = function (msg, stats) {
       if (!G.playing) return;
       G.playing = false; A.Music.stop(true); A.play('lose');
-      showPanel([h('p', { class: 'kicker bad' }, 'Inténtalo otra vez'), h('h1', {}, msg || 'Casi'), statsBlock(stats),
-        h('div', { class: 'row' },
-          h('button', { class: 'btn primary', onclick: () => start(G.level) }, 'Reintentar'),
-          h('button', { class: 'btn ghost', onclick: () => { startMusicMenu(); showLevels(); } }, 'Niveles'))], 'lose');
+      showPanel([
+        h('header', { class: 'head' }, eyebrow(cfg.title, `nivel ${G.level}`, 'inténtalo otra vez'), h('h1', { class: 'mega' }, msg || 'Casi')),
+        h('div', { class: 'side' }, figures(stats)),
+        h('footer', { class: 'foot' },
+          ...bigBtn(RETRY, 'Reintentar', `nivel ${G.level}`, () => start(G.level)),
+          h('div', { class: 'pills' }, btn('Niveles', () => { startMusicMenu(); showLevels(); }, 'ghost')))
+      ], 'lose');
     };
     G.hud = function (obj) {
       const keys = Object.keys(obj), sig = keys.join('|');
