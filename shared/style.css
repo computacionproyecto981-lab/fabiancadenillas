@@ -88,11 +88,16 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .eyebrow,.label{font-size:12px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;opacity:.7;margin:0 0 18px;white-space:pre}
 .mega{font-size:clamp(52px,9vw,148px);font-weight:800;letter-spacing:-.055em;line-height:.88;margin:0;text-wrap:balance}
 .tag{font-size:clamp(16px,1.6vw,21px);line-height:1.45;opacity:.82;max-width:32ch;margin:24px 0 0}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.steps li{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.09)}
-.steps .n{font-size:26px;font-weight:800;opacity:.45;line-height:1;font-variant-numeric:tabular-nums}
-.steps p{margin:1px 0 0;font-size:15px;line-height:1.45}
-.steps b{font-weight:700;background:rgba(255,255,255,.17);padding:1px 7px;border-radius:6px;white-space:nowrap}
+.steps{list-style:none;margin:0;padding:0;position:relative;counter-reset:s}
+.steps::before{content:'';position:absolute;left:19px;top:22px;bottom:22px;width:2px;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.45) 0 6px,transparent 6px 12px)}
+.steps li{position:relative;display:grid;grid-template-columns:40px 1fr;gap:18px;align-items:center;padding:12px 0}
+.steps .n{position:relative;z-index:1;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--deep);font-size:14px;font-weight:800;letter-spacing:-.02em;box-shadow:0 0 0 6px var(--deep),0 6px 18px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;transition:transform .2s}
+.steps li:hover .n{transform:scale(1.12)}
+.steps p{margin:0;font-size:16px;line-height:1.5;color:rgba(255,255,255,.92)}
+.steps li:first-child p{font-size:18px;font-weight:600;color:#fff}
+.steps b{display:inline-block;font-weight:700;font-size:13px;line-height:1.3;color:var(--deep);background:#fff;padding:3px 9px 4px;margin:0 2px;border-radius:7px;box-shadow:0 3px 0 rgba(0,0,0,.28),inset 0 -1px 0 rgba(0,0,0,.08);transform:translateY(-1px);white-space:nowrap}
+.side>.label{display:flex;align-items:center;gap:12px}
+.side>.label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.25)}
 .play{width:84px;height:84px;flex:none;border-radius:50%;border:0;background:#fff;color:var(--deep);display:grid;place-items:center;cursor:pointer;box-shadow:0 14px 40px rgba(0,0,0,.28);transition:transform .2s}
 .play:hover{transform:scale(1.07)}
 .play svg{width:34px;height:34px}
