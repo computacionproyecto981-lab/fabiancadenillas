@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hockey de Aire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 540, H = 900, M = 26, PR = 34, KR = 21, NL = 8;
+const RIVALS = ['Novato', 'Aprendiz', 'Rápido', 'Táctico', 'Muro', 'Veloz', 'Maestro', 'Campeón'];
+const P = new Engine.Particles();
+let S = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const G = Engine.create({
+  id: 'hockey', title: 'Hockey de Aire', genre: 'Duelo · física', accent: '#2f6df6', bg: '#eef2f8',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="10" y="6" width="44" height="52" rx="10"/><path d="M10 32h44M24 6h16M24 58h16"/><circle cx="32" cy="32" r="6" fill="currentColor"/></svg>',
+  tagline: 'Golpea el disco con tu mazo, rebota en las bandas y marca antes que la máquina. Primero en llegar a 5 gana.',
+  help: ['Mueve el <b>ratón</b> o el <b>dedo</b>: tu mazo lo sigue en tu mitad de la pista', 'Golpea el disco con velocidad para tiros más fuertes', 'Usa los rebotes en las bandas para engañar al rival', 'Gana por mucha diferencia para ★★★'],
+  levels: NL, maxScale: 1.05,
+  song: { bpm: 128, root: 52, scale: 'major', prog: [0, 4, 5, 3], padInst: 'padSaw', arpInst: 'pluck', arp: 'x.x.x.x.x.x.x.x.', arpOct: 5, leadInst: 'lead', leadOct: 5, leadDensity: .4,
+    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '..x...x...x...x.', bass: 'xoxoxoxoxoxoxoxo', bassInst: 'bassSaw', bassLen: 1, fill: true, seed: 71 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    const mv = e => { if (S) { const p = g.pos(e); S.aim = { x: p.x, y: p.y - (e.pointerType === 'touch' ? 40 : 0) }; } };
+    g.cv.addEventListener('pointermove', mv); g.cv.addEventListener('pointerdown', mv);
+  }
+});
+function load(n) {
+  S = { n, goalW: n >= 7 ? 150 : 180, bumpers: n >= 5 ? [{ x: W / 2 - 110, y: H / 2, r: 22 }, { x: W / 2 + 110, y: H / 2, r: 22 }] : [],
+    me: { x: W / 2, y: H - 140, vx: 0, vy: 0 }, ai: { x: W / 2, y: 140, vx: 0, vy: 0 }, puck: { x: W / 2, y: H / 2 + 80, vx: 0, vy: 0 },
+    aim: null, sMe: 0, sAi: 0, to: 5, wait: 1.2, t: 0, flash: 0, done: false, aiSpeed: 280 + n * 80, aiErr: Math.max(4, 48 - n * 6), aiAgg: .2 + n * .1 };
+  P.clear(); hud(); G.toast(`Rival: ${RIVALS[n - 1]}`);
+}
+function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Rival: RIVALS[S.n - 1], Marcador: `${S.sMe} – ${S.sAi}` }); }
+function moveMallet(m, tx, ty, maxSp, dt, top) {
+  const minY = top ? M + PR : H / 2 + PR, maxY = top ? H / 2 - PR : H - M - PR;
+  tx = Engine.clamp(tx, M + PR, W - M - PR); ty = Engine.clamp(ty, minY, maxY);
+  let dx = tx - m.x, dy = ty - m.y; const d = Math.hypot(dx, dy), step = maxSp * dt;
+  if (d > step) { dx = dx / d * step; dy = dy / d * step; }
+  m.vx = dx / dt; m.vy = dy / dt; m.x += dx; m.y += dy;
+}
+function collideMallet(m) {
+  const p = S.puck, dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy);
+  if (d >= PR + KR || d === 0) return;
+  const nx = dx / d, ny = dy / d;
+  p.x = m.x + nx * (PR + KR); p.y = m.y + ny * (PR + KR);
+  const inMouth = Math.abs(p.x - W / 2) < S.goalW / 2 - KR * .4;
+  p.x = Engine.clamp(p.x, M + KR, W - M - KR);
+  if (!inMouth) p.y = Engine.clamp(p.y, M + KR, H - M - KR);
+  const rvx = p.vx - m.vx, rvy = p.vy - m.vy, vn = rvx * nx + rvy * ny;
+  if (vn < 0) { p.vx -= 1.9 * vn * nx; p.vy -= 1.9 * vn * ny; }
+  const sp = Math.hypot(p.vx, p.vy);
+  if (sp > 1500) { p.vx *= 1500 / sp; p.vy *= 1500 / sp; }
+  if (-vn > 60) { G.sfx('clack', { vol: Math.min(1, -vn / 900), pitch: .7 + Math.min(.6, -vn / 2000), pan: G.pan(p.x) }); P.burst(p.x - nx * KR, p.y - ny * KR, 5, { color: '#2f6df6', speed: 120, life: .3, size: 3 }); }
+}
+function score(me) {
+  if (me) S.sMe++; else S.sAi++;
+  hud(); S.flash = .5;
+  G.sfx('horn', { pitch: me ? 1 : .8 }); if (me) G.sfx('crowd');
+  P.burst(W / 2, me ? M : H - M, 50, { color: me ? ['#2f6df6', '#ffffff', '#ffd36b'] : ['#e5484d', '#ffffff'], speed: 380 });
+  G.toast(me ? '¡GOL!' : 'Gol del rival', 1000);
+  const p = S.puck; p.vx = p.vy = 0; p.x = W / 2; p.y = me ? H / 2 - 80 : H / 2 + 80; S.wait = 1.1;
+  G.music.setIntensity(Math.max(S.sMe, S.sAi) >= S.to - 1 ? 2 : 1);
+  if (S.sMe >= S.to || S.sAi >= S.to) {
+    S.done = true;
+    const diff = S.sMe - S.sAi;
+    later(() => {
+      if (diff > 0) G.win(diff >= 4 ? 3 : diff >= 2 ? 2 : 1, [['Marcador', `${S.sMe} – ${S.sAi}`], ['Rival', RIVALS[S.n - 1]]], diff * 100);
+      else G.lose('El rival ganó el partido', [['Marcador', `${S.sMe} – ${S.sAi}`]]);
+    }, 900);
+  }
+}
+function update(dt) {
+  S.t += dt; S.flash = Math.max(0, S.flash - dt);
+  const p = S.puck;
+  if (S.aim) moveMallet(S.me, S.aim.x, S.aim.y, 2600, dt, false); else { S.me.vx = S.me.vy = 0; }
+  // IA
+  const ai = S.ai;
+  let tx = W / 2 + (p.x - W / 2) * .55, ty = 120;
+  if (p.y < H / 2 + 40 && (p.vy < 160 || p.y < ai.y + 60)) {
+    if (p.y > ai.y - 10) {
+      // colocarse detrás del disco en la línea hacia la portería del jugador y lanzarse a través de él
+      const gx = W / 2 + Math.sin(S.t * 1.3) * S.goalW * .3, gy = H;
+      let dx = gx - p.x, dy = gy - p.y; const dl = Math.hypot(dx, dy); dx /= dl; dy /= dl;
+      const bx = p.x - dx * (PR + KR + 6), by = p.y - dy * (PR + KR + 6);
+      if (Math.hypot(ai.x - bx, ai.y - by) < 14 + S.aiAgg * 20 || S.lunge > 0) {
+        S.lunge = S.lunge > 0 ? S.lunge - dt : .35;
+        tx = p.x + dx * 90; ty = p.y + dy * 90;
+      } else { tx = bx; ty = by; }
+      tx += Math.sin(S.t * 3) * S.aiErr * .3;
+    }
+    else {
+      // el disco está entre la IA y su portería: rodearlo por el lado
+      const side = p.x < W / 2 ? 1 : -1;
+      tx = p.x + side * 80;
+      ty = Math.abs(ai.x - p.x) < 70 ? ai.y : p.y - 55;
+      S.lunge = 0;
+    }
+  } else if (p.vy < 0) {
+    const t = (130 - p.y) / p.vy;
+    if (t > 0 && t < 2) tx = Engine.clamp(p.x + p.vx * t * .8, M + PR, W - M - PR);
+  }
+  moveMallet(ai, tx + (Math.random() - .5) * S.aiErr * dt * 30, ty, S.aiSpeed, dt, true);
+  if (S.wait > 0) { S.wait -= dt; collideMallet(S.me); return P.update(dt); }
+  if (S.done) return P.update(dt);
+  const sp = Math.hypot(p.vx, p.vy), steps = Math.max(1, Math.ceil(sp * dt / 8));
+  for (let i = 0; i < steps; i++) {
+    const d = dt / steps;
+    p.x += p.vx * d; p.y += p.vy * d;
+    if (p.x < M + KR) { p.x = M + KR; p.vx = Math.abs(p.vx) * .92; band(); }
+    if (p.x > W - M - KR) { p.x = W - M - KR; p.vx = -Math.abs(p.vx) * .92; band(); }
+    const inGoal = Math.abs(p.x - W / 2) < S.goalW / 2 - KR * .4;
+    if (p.y < M + KR) { if (inGoal) { if (p.y < M - KR) return score(true); } else { p.y = M + KR; p.vy = Math.abs(p.vy) * .92; band(); } }
+    if (p.y > H - M - KR) { if (inGoal) { if (p.y > H - M + KR) return score(false); } else { p.y = H - M - KR; p.vy = -Math.abs(p.vy) * .92; band(); } }
+    for (const b of S.bumpers) { const dx = p.x - b.x, dy = p.y - b.y, dd = Math.hypot(dx, dy); if (dd < b.r + KR) { const nx = dx / dd, ny = dy / dd; p.x = b.x + nx * (b.r + KR); p.y = b.y + ny * (b.r + KR); const vn = p.vx * nx + p.vy * ny; if (vn < 0) { p.vx -= 2.1 * vn * nx; p.vy -= 2.1 * vn * ny; G.sfx('pop', { pan: G.pan(p.x) }); } } }
+    collideMallet(S.me); collideMallet(ai);
+  }
+  const f = Math.exp(-.28 * dt); p.vx *= f; p.vy *= f;
+  // antibloqueo: si el disco queda quieto en el campo rival, recibe un pequeño empujón
+  if (Math.hypot(p.vx, p.vy) < 25 && p.y < H / 2) { S.stall = (S.stall || 0) + dt; if (S.stall > 2.2) { p.vx += (W / 2 - p.x) * .8; p.vy += 140; S.stall = 0; } } else S.stall = 0;
+  P.update(dt);
+}
+function band() { const sp = Math.hypot(S.puck.vx, S.puck.vy); if (sp > 80) G.sfx('wood', { vol: Math.min(1, sp / 1200), pitch: .8, pan: G.pan(S.puck.x) }); }
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  c.fillStyle = '#eef2f8'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(M, M, W - 2 * M, H - 2 * M, 40); c.fill();
+  c.strokeStyle = '#c9d4e6'; c.lineWidth = 3; c.stroke();
+  c.strokeStyle = 'rgba(47,109,246,.25)'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(M, H / 2); c.lineTo(W - M, H / 2); c.stroke();
+  c.beginPath(); c.arc(W / 2, H / 2, 70, 0, 6.283); c.stroke();
+  c.strokeStyle = 'rgba(229,72,77,.25)';
+  c.beginPath(); c.arc(W / 2, M, 110, 0, Math.PI); c.stroke(); c.beginPath(); c.arc(W / 2, H - M, 110, Math.PI, 0); c.stroke();
+  c.fillStyle = '#1b2433';
+  c.fillRect(W / 2 - S.goalW / 2, M - 8, S.goalW, 10); c.fillRect(W / 2 - S.goalW / 2, H - M - 2, S.goalW, 10);
+  for (const b of S.bumpers) { c.fillStyle = '#ffd36b'; c.beginPath(); c.arc(b.x, b.y, b.r, 0, 6.283); c.fill(); c.strokeStyle = '#e0a020'; c.lineWidth = 3; c.stroke(); }
+  c.fillStyle = 'rgba(27,36,51,.06)'; c.font = '700 160px Inter, sans-serif'; c.textAlign = 'center';
+  c.fillText(S.sAi, W / 2, H / 2 - 120); c.fillText(S.sMe, W / 2, H / 2 + 230);
+  const p = S.puck;
+  c.fillStyle = 'rgba(0,0,0,.1)'; c.beginPath(); c.arc(p.x + 3, p.y + 5, KR, 0, 6.283); c.fill();
+  c.fillStyle = '#1b2433'; c.beginPath(); c.arc(p.x, p.y, KR, 0, 6.283); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = 2; c.beginPath(); c.arc(p.x, p.y, KR - 6, 0, 6.283); c.stroke();
+  mallet(c, S.ai, '#e5484d'); mallet(c, S.me, '#2f6df6');
+  P.draw(c);
+  if (S.wait > 0 && !S.done && G.playing) { c.fillStyle = 'rgba(27,36,51,.5)'; c.font = '600 18px Inter, sans-serif'; c.textAlign = 'center'; c.fillText('Prepárate…', W / 2, H / 2 + 6 + (p.y > H / 2 ? 130 : -130)); }
+  if (S.flash) { c.fillStyle = `rgba(255,255,255,${S.flash})`; c.fillRect(0, 0, W, H); }
+}
+function mallet(c, m, col) {
+  c.fillStyle = 'rgba(0,0,0,.12)'; c.beginPath(); c.arc(m.x + 3, m.y + 6, PR, 0, 6.283); c.fill();
+  c.fillStyle = col; c.beginPath(); c.arc(m.x, m.y, PR, 0, 6.283); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.arc(m.x, m.y, PR * .55, 0, 6.283); c.fill();
+  c.fillStyle = col; c.beginPath(); c.arc(m.x, m.y, PR * .3, 0, 6.283); c.fill();
+}
+</script></body></html>

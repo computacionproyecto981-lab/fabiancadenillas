@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Desatasco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+// Puzles generados por ordenador; el primer número es el mínimo de movimientos (verificado por búsqueda BFS).
+const LEVELS = [[2,[[1,2,2,1],[3,0,2,0],[0,0,2,0],[1,1,2,1],[2,3,3,1],[0,5,2,1],[4,1,2,1],[2,4,2,1],[5,2,2,0]]],[4,[[2,2,2,1],[4,0,2,1],[4,2,2,0],[0,5,2,1],[0,3,2,1],[3,0,2,0],[5,2,3,0],[3,4,2,1],[2,5,3,1],[0,1,2,1]]],[6,[[2,2,2,1],[1,3,2,1],[3,4,2,1],[5,1,2,0],[4,0,2,1],[3,5,2,1],[0,3,2,0],[5,3,2,0],[4,1,3,0]]],[8,[[1,2,2,1],[2,4,2,1],[0,4,2,0],[1,1,2,1],[3,0,2,0],[5,2,2,0],[5,0,2,0],[2,3,2,1],[1,0,2,1],[2,5,2,1],[4,4,2,1],[4,1,3,0],[1,4,2,0]]],[10,[[0,2,2,1],[2,3,2,0],[4,2,2,0],[3,1,2,1],[2,1,2,0],[3,5,2,1],[3,0,3,1],[0,5,2,1],[0,3,2,0],[4,4,2,1],[3,2,2,0]]],[12,[[0,2,2,1],[3,5,2,1],[2,1,2,0],[1,5,2,1],[3,4,3,1],[4,1,2,0],[2,0,2,1],[2,3,2,1],[4,3,2,1],[5,0,2,0],[1,3,2,0],[0,0,2,1],[3,1,2,0],[0,4,2,0]]],[16,[[0,2,2,1],[3,3,2,1],[2,2,2,0],[5,3,2,0],[2,5,2,1],[0,0,2,0],[5,0,2,0],[0,5,2,1],[0,3,2,0],[1,0,2,1],[3,0,2,1],[3,1,2,0],[2,4,2,1],[4,5,2,1]]],[18,[[0,2,2,1],[0,4,2,0],[4,2,3,0],[3,0,2,1],[2,0,3,0],[5,0,2,0],[3,2,2,0],[5,2,2,0],[3,4,2,0],[0,3,2,1],[1,0,2,0]]],[20,[[0,2,2,1],[4,4,2,1],[3,5,2,1],[2,0,3,1],[4,2,2,0],[1,4,2,1],[0,4,2,0],[5,2,2,0],[0,3,2,1],[2,2,2,0],[5,0,2,0],[3,3,2,0]]],[30,[[1,2,2,1],[2,4,2,0],[4,5,2,1],[3,0,2,0],[3,3,2,0],[0,3,2,1],[5,0,3,0],[0,0,3,1],[0,1,2,0],[4,2,2,0],[4,4,2,1],[4,0,2,0],[1,1,2,1]]]];
+const C = 90, PAD = 30, W = PAD * 2 + C * 6, H = W, ROW = 2;
+const COLORS = ['#cdb79e', '#a9c1b5', '#b7b3d1', '#d8c48f', '#a7bed6', '#d6a9a1', '#b9cf9c', '#c8a8c6'];
+const P = new Engine.Particles();
+let S = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const G = Engine.create({
+  id: 'desatasco', title: 'Desatasco', genre: 'Lógica · deslizar', accent: '#e05a47', bg: '#f1ede6',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="8" y="8" width="48" height="48" rx="5"/><rect x="14" y="26" width="22" height="10" rx="3" fill="currentColor"/><rect x="40" y="14" width="10" height="22" rx="3"/><rect x="14" y="42" width="30" height="8" rx="3"/><path d="M56 31h6"/></svg>',
+  tagline: 'Desliza los bloques por sus carriles para abrir paso y sacar el bloque rojo por la salida.',
+  help: ['<b>Arrastra</b> cada bloque: los horizontales solo se mueven a los lados y los verticales arriba y abajo', 'Saca el <b>bloque rojo</b> por la abertura de la derecha', '<b>Z</b> deshace · cada arrastre cuenta como un movimiento', 'Resuélvelo en el mínimo de movimientos para ★★★'],
+  levels: LEVELS.length,
+  song: { bpm: 90, root: 50, scale: 'dorian', prog: [0, 3, 6, 2], padInst: 'padSoft', arpInst: 'piano', arp: 'x..x..x...x..x..', arpOct: 4, leadInst: 'piano', leadOct: 5, leadDensity: .32, swing: .25,
+    kick: 'x.........x.....', snare: '....x.......x...', hat: 'x.xxx.xxx.xxx.xx', shaker: true, bass: 'x...x...x...x.5.', bassInst: 'bassSub', bassLen: 3, seed: 53 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    g.cv.addEventListener('pointerdown', down);
+    g.cv.addEventListener('pointermove', move);
+    g.cv.addEventListener('pointerup', up); g.cv.addEventListener('pointercancel', up);
+    addEventListener('keydown', e => { if (e.code === 'KeyZ' || e.code === 'Backspace') undo(); });
+  }
+});
+function load(n) {
+  const [opt, bl] = LEVELS[n - 1];
+  S = { n, opt, blocks: bl.map(([x, y, len, h], i) => ({ x, y, len, h: !!h, p: h ? x : y, d: h ? x : y, key: i === 0, col: COLORS[i % COLORS.length] })), moves: 0, hist: [], drag: null, done: false, t: 0, exitT: 0 };
+  P.clear(); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${LEVELS.length}`, Movimientos: S.moves, Mínimo: S.opt }); }
+function cellOf(e) { const p = G.pos(e); return [Math.floor((p.x - PAD) / C), Math.floor((p.y - PAD) / C), p]; }
+function occupied(skip) {
+  const g = new Array(36).fill(false);
+  S.blocks.forEach(b => { if (b === skip) return; for (let k = 0; k < b.len; k++) { const x = b.h ? b.p + k : b.x, y = b.h ? b.y : b.p + k; if (x >= 0 && x < 6) g[y * 6 + x] = true; } });
+  return g;
+}
+function down(e) {
+  if (!S || S.done || !G.playing || G.paused) return;
+  const [cx, cy, p] = cellOf(e);
+  const b = S.blocks.find(b => b.h ? (cy === b.y && cx >= b.p && cx < b.p + b.len) : (cx === b.x && cy >= b.p && cy < b.p + b.len));
+  if (!b) return;
+  const g = occupied(b);
+  let lo = b.p, hi = b.p;
+  while (lo - 1 >= 0 && !g[b.h ? b.y * 6 + lo - 1 : (lo - 1) * 6 + b.x]) lo--;
+  while (hi + b.len < 6 && !g[b.h ? b.y * 6 + hi + b.len : (hi + b.len) * 6 + b.x]) hi++;
+  S.drag = { b, start: b.p, lo, hi, from: b.h ? p.x : p.y, last: b.p };
+  G.cv.setPointerCapture(e.pointerId);
+  G.sfx('wood', { pitch: 1.2 });
+}
+function move(e) {
+  const d = S && S.drag; if (!d) return;
+  const p = G.pos(e), cur = d.b.h ? p.x : p.y;
+  d.b.d = Engine.clamp(d.start + (cur - d.from) / C, d.lo, d.hi);
+  const cell = Math.round(d.b.d);
+  if (cell !== d.last) { d.last = cell; G.sfx('slide', { pitch: .8 + d.b.len * .1, pan: G.pan(PAD + (d.b.h ? d.b.d : d.b.x) * C) }); }
+}
+function up() {
+  const d = S && S.drag; if (!d) return;
+  S.drag = null;
+  const np = Math.round(d.b.d);
+  if (np !== d.start) {
+    S.hist.push(S.blocks.map(b => b.p));
+    d.b.p = np; S.moves++; hud();
+    G.sfx('clack', { pitch: .8 + Math.random() * .2, pan: G.pan(PAD + (d.b.h ? np : d.b.x) * C) });
+    if (d.b.key && np + d.b.len === 6) finish();
+  }
+}
+function undo() {
+  if (!S || S.done || !S.hist.length || G.paused) return;
+  const prev = S.hist.pop(); S.blocks.forEach((b, i) => b.p = prev[i]); S.moves = Math.max(0, S.moves - 1); hud(); G.sfx('back');
+}
+function finish() {
+  S.done = true; S.exitT = .001;
+  G.sfx('whoosh', { pitch: 1.2 });
+  const stars = S.moves <= S.opt ? 3 : S.moves <= Math.ceil(S.opt * 1.5) + 1 ? 2 : 1;
+  later(() => G.win(stars, [['Movimientos', S.moves], ['Mínimo posible', S.opt], ['Tiempo', S.t.toFixed(0) + ' s']], 1000 - S.moves * 10), 800);
+}
+function update(dt) {
+  S.t += dt;
+  const k = 1 - Math.exp(-dt * 20);
+  for (const b of S.blocks) if (!S.drag || S.drag.b !== b) b.d += (b.p - b.d) * k;
+  if (S.exitT) {
+    S.exitT += dt; const kb = S.blocks[0]; kb.p = 4 + S.exitT * 9; kb.d = kb.p;
+    if (Math.random() < .5) P.burst(PAD + 6 * C, PAD + ROW * C + C / 2, 2, { color: '#e05a47', speed: 120, angle: 0, spread: 1.2, life: .4 });
+  }
+  P.update(dt);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  c.fillStyle = '#f1ede6'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#e3ddd3'; c.beginPath(); c.roundRect(PAD - 12, PAD - 12, C * 6 + 24, C * 6 + 24, 20); c.fill();
+  c.fillStyle = '#f8f5ef'; c.beginPath(); c.roundRect(PAD, PAD, C * 6, C * 6, 12); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.05)'; c.lineWidth = 1;
+  for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(PAD + i * C, PAD); c.lineTo(PAD + i * C, PAD + 6 * C); c.moveTo(PAD, PAD + i * C); c.lineTo(PAD + 6 * C, PAD + i * C); c.stroke(); }
+  c.fillStyle = '#f1ede6'; c.fillRect(PAD + 6 * C - 2, PAD + ROW * C + 8, 18, C - 16);
+  c.fillStyle = '#e05a47'; c.beginPath(); c.moveTo(W - 12, PAD + ROW * C + C / 2 - 9); c.lineTo(W - 2, PAD + ROW * C + C / 2); c.lineTo(W - 12, PAD + ROW * C + C / 2 + 9); c.fill();
+  c.save(); c.beginPath(); c.rect(PAD - 12, PAD - 12, W, C * 6 + 24); c.clip();
+  for (const b of S.blocks) {
+    const x = PAD + (b.h ? b.d : b.x) * C + 6, y = PAD + (b.h ? b.y : b.d) * C + 6;
+    const w = (b.h ? b.len : 1) * C - 12, h = (b.h ? 1 : b.len) * C - 12;
+    const lift = S.drag && S.drag.b === b ? 4 : 0;
+    c.fillStyle = 'rgba(0,0,0,.12)'; c.beginPath(); c.roundRect(x + 2, y + 5, w, h, 14); c.fill();
+    c.fillStyle = b.key ? '#e05a47' : b.col; c.beginPath(); c.roundRect(x, y - lift, w, h, 14); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.28)'; c.beginPath(); c.roundRect(x + 6, y - lift + 6, w - 12, 8, 4); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.12)';
+    if (b.h) for (const ox of [w / 2 - 10, w / 2, w / 2 + 10]) { c.beginPath(); c.arc(x + ox, y - lift + h / 2 + 4, 2.5, 0, 6.283); c.fill(); }
+    else for (const oy of [h / 2 - 10, h / 2, h / 2 + 10]) { c.beginPath(); c.arc(x + w / 2, y - lift + oy + 4, 2.5, 0, 6.283); c.fill(); }
+  }
+  c.restore();
+  P.draw(c);
+}
+</script></body></html>

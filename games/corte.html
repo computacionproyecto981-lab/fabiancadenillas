@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Corte Cósmico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 960, H = 600, GRAV = 760, NL = 10;
+const HUES = [190, 280, 320, 40, 150, 210];
+const P = new Engine.Particles();
+let S = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const G = Engine.create({
+  id: 'corte', title: 'Corte Cósmico', genre: 'Deslizar · reflejos', accent: '#7c5cff', bg: '#0b0b16', dark: true,
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M22 10l12 8-4 16-14-2-4-14z"/><path d="M38 34l14 2 2 14-12 6-8-10z"/><path d="M6 58 58 6" stroke-dasharray="2 6"/></svg>',
+  tagline: 'Los cristales salen disparados desde abajo: córtalos de un tajo antes de que caigan y no toques las bombas.',
+  help: ['<b>Arrastra</b> el ratón o el dedo para cortar', 'Cortar varios cristales de un solo tajo da <b>combo</b>', 'Un cristal que cae sin cortar te quita una vida', 'Las <b>bombas</b> negras te quitan una vida · el cristal dorado ralentiza el tiempo'],
+  levels: NL, maxScale: 1.3,
+  song: { bpm: 138, root: 50, scale: 'minor', prog: [0, 5, 3, 4], padInst: 'padSaw', arpInst: 'pluck', arp: 'x.xxx.xxx.xxx.xx', arpOct: 5, leadInst: 'saw', leadOct: 5, leadDensity: .45,
+    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: 'xxoxxxoxxxoxxxox', bass: '.x.x.x.x.x.x.x.x', bassInst: 'bassSaw', bassLen: 1, fill: true, seed: 127 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    let last = null, lastT = 0;
+    g.cv.addEventListener('pointerdown', e => { last = g.pos(e); lastT = performance.now(); g.cv.setPointerCapture(e.pointerId); if (S) S.blade = [last]; });
+    g.cv.addEventListener('pointermove', e => {
+      if (!last || !S) return;
+      const p = g.pos(e), now = performance.now(), dt = Math.max(1, now - lastT), sp = Math.hypot(p.x - last.x, p.y - last.y) / dt;
+      if (sp > .35) slash(last, p);
+      S.blade.push({ x: p.x, y: p.y, t: now }); if (S.blade.length > 14) S.blade.shift();
+      last = p; lastT = now;
+    });
+    g.cv.addEventListener('pointerup', () => { last = null; if (S) endSwipe(); });
+  }
+});
+function load(n) {
+  S = { n, objs: [], halves: [], need: 12 + n * 3, cut: 0, lives: 3, spawnT: 1, t: 0, slow: 0, swipe: [], blade: [], swish: 0, best: 0, done: false, rnd: Engine.rng(n * 811 + 5) };
+  P.clear(); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Cortados: `${S.cut}/${S.need}`, Vidas: '♥'.repeat(S.lives) + '♡'.repeat(3 - S.lives), 'Mejor combo': S.best }); }
+function spawnWave() {
+  const r = S.rnd, n = S.n;
+  const count = 1 + Math.floor(r() * Math.min(5, 2 + n * .4));
+  const bombP = n < 2 ? 0 : Math.min(.3, .08 + n * .025);
+  for (let i = 0; i < count; i++) {
+    const x = 120 + r() * (W - 240);
+    const bomb = r() < bombP, gold = !bomb && n >= 4 && r() < .06;
+    S.objs.push({ x, y: H + 40 + i * 30, vx: (W / 2 - x) * (.3 + r() * .5), vy: -(560 + r() * 200), r: bomb ? 26 : 30 + r() * 10, rot: r() * 6, vr: (r() - .5) * 4, bomb, gold, hue: HUES[(r() * HUES.length) | 0], sides: 5 + ((r() * 3) | 0) });
+  }
+  G.sfx('whoosh', { pitch: .5, vol: .5 });
+  S.spawnT = Math.max(.75, 2.1 - n * .12) * (.8 + r() * .5);
+}
+function distSeg(p, a, b) { const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy || 1; const t = Engine.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / l, 0, 1); return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t); }
+function slash(a, b) {
+  if (!G.playing || G.paused || S.done) return;
+  S.swish -= 1; if (S.swish <= 0) { G.sfx('swish', { pitch: .9 + Math.random() * .3, pan: G.pan(b.x), vol: .6 }); S.swish = 6; }
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  for (const o of S.objs) {
+    if (o.dead || distSeg(o, a, b) > o.r) continue;
+    o.dead = true;
+    if (o.bomb) {
+      G.sfx('explosion', { pan: G.pan(o.x) }); S.flash = .5; S.lives--;
+      P.burst(o.x, o.y, 50, { color: ['#ffffff', '#ff7a3d', '#333'], speed: 420 });
+      hud(); if (S.lives <= 0) lose(); continue;
+    }
+    S.cut++; S.swipe.push(o);
+    if (o.gold) { S.slow = 3; G.sfx('chime', { pitch: .8 }); }
+    G.sfx('slice', { pitch: .8 + Math.random() * .5, pan: G.pan(o.x) }); G.sfx('shatter', { vol: .6, pan: G.pan(o.x) });
+    const col = o.gold ? '#ffd36b' : `hsl(${o.hue},90%,65%)`;
+    P.burst(o.x, o.y, 18, { color: [col, '#ffffff'], speed: 260, shape: 'square', size: 4, gravity: 600 });
+    for (const s of [-1, 1]) S.halves.push({ x: o.x, y: o.y, vx: o.vx + Math.cos(ang + s * Math.PI / 2) * 140, vy: o.vy * .4 + Math.sin(ang + s * Math.PI / 2) * 140 - 60, rot: o.rot, vr: s * 5, cut: ang, side: s, o, t: 0 });
+    hud();
+  }
+  if (S.cut >= S.need && !S.done) win();
+}
+function endSwipe() {
+  const n = S.swipe.length;
+  if (n >= 3) { const bonus = n; S.best = Math.max(S.best, n); G.sfx('combo', { pitch: 1 + n * .05 }); P.text(S.swipe[n - 1].x, S.swipe[n - 1].y - 30, `¡Combo x${n}!`, { color: '#ffd36b', size: 26 }); S.need = Math.max(S.cut, S.need - bonus + 1); hud(); if (S.cut >= S.need && !S.done) win(); }
+  else if (n) S.best = Math.max(S.best, n);
+  S.swipe = [];
+}
+function lose() { S.done = true; later(() => G.lose('Sin vidas', [['Cortados', `${S.cut}/${S.need}`], ['Mejor combo', S.best]]), 700); }
+function win() {
+  S.done = true; G.music.setIntensity(2);
+  later(() => G.win(S.lives >= 3 ? 3 : S.lives === 2 ? 2 : 1, [['Cortados', S.cut], ['Vidas', S.lives], ['Mejor combo', S.best]], S.cut * 10 + S.lives * 100), 800);
+}
+function update(dt) {
+  S.t += dt; S.flash = Math.max(0, (S.flash || 0) - dt);
+  const k = S.slow > 0 ? .45 : 1; S.slow = Math.max(0, S.slow - dt);
+  const d = dt * k;
+  if (!S.done) { S.spawnT -= d; if (S.spawnT <= 0) spawnWave(); }
+  G.music.setIntensity(S.cut > S.need / 2 ? 2 : 1);
+  for (const o of S.objs) {
+    o.vy += GRAV * d; o.x += o.vx * d; o.y += o.vy * d; o.rot += o.vr * d;
+    if (o.x < o.r || o.x > W - o.r) o.vx *= -1;
+    if (!o.dead && o.vy > 0 && o.y > H + o.r + 10) {
+      o.dead = true;
+      if (!o.bomb && !S.done) { S.lives--; G.sfx('error'); hud(); P.burst(o.x, H - 4, 12, { color: '#ff4f6d', speed: 200, angle: -Math.PI / 2, spread: 1.4 }); if (S.lives <= 0) lose(); }
+    }
+  }
+  S.objs = S.objs.filter(o => !o.dead);
+  for (const h of S.halves) { h.t += d; h.vy += GRAV * d; h.x += h.vx * d; h.y += h.vy * d; h.rot += h.vr * d; }
+  S.halves = S.halves.filter(h => h.y < H + 80);
+  const now = performance.now(); S.blade = S.blade.filter(p => !p.t || now - p.t < 140);
+  P.update(dt);
+}
+function poly(c, o, r) { c.beginPath(); for (let i = 0; i < o.sides; i++) { const a = i / o.sides * 6.283; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); }
+function drawObj(c, o) {
+  if (o.bomb) {
+    c.fillStyle = '#1d1d24'; c.beginPath(); c.arc(0, 0, o.r, 0, 6.283); c.fill();
+    c.strokeStyle = '#ff4f6d'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, o.r - 5, 0, 6.283); c.stroke();
+    c.fillStyle = `rgba(255,79,109,${.6 + Math.sin(S.t * 14) * .4})`; c.beginPath(); c.arc(0, -o.r - 4, 5, 0, 6.283); c.fill();
+    return;
+  }
+  const g = c.createLinearGradient(-o.r, -o.r, o.r, o.r);
+  if (o.gold) { g.addColorStop(0, '#fff3c4'); g.addColorStop(1, '#e0a020'); }
+  else { g.addColorStop(0, `hsl(${o.hue},90%,78%)`); g.addColorStop(1, `hsl(${o.hue},70%,42%)`); }
+  c.fillStyle = g; poly(c, o, o.r); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.25)'; poly(c, o, o.r * .55); c.fill();
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  c.fillStyle = S.slow > 0 ? '#14122a' : '#0b0b16'; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 70; i++) { c.fillStyle = `rgba(255,255,255,${.15 + (i % 5) * .08})`; c.fillRect((i * 137) % W, (i * 89 + S.t * (5 + i % 4) * 4) % H, 2, 2); }
+  for (const o of S.objs) { c.save(); c.translate(o.x, o.y); c.rotate(o.rot); drawObj(c, o.o || o); c.restore(); }
+  for (const h of S.halves) {
+    c.save(); c.globalAlpha = Math.max(0, 1 - h.t * .8); c.translate(h.x, h.y);
+    c.rotate(h.cut); c.beginPath(); c.rect(-100, h.side < 0 ? -100 : 0, 200, 100); c.clip(); c.rotate(-h.cut);
+    c.rotate(h.rot); drawObj(c, h.o); c.restore();
+  }
+  if (S.blade.length > 1) {
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (let i = 1; i < S.blade.length; i++) { const k = i / S.blade.length; c.strokeStyle = `rgba(200,190,255,${k})`; c.lineWidth = 2 + k * 8; c.beginPath(); c.moveTo(S.blade[i - 1].x, S.blade[i - 1].y); c.lineTo(S.blade[i].x, S.blade[i].y); c.stroke(); }
+  }
+  P.draw(c);
+  c.fillStyle = 'rgba(255,255,255,.1)'; c.fillRect(20, H - 12, W - 40, 4); c.fillStyle = '#7c5cff'; c.fillRect(20, H - 12, (W - 40) * Math.min(1, S.cut / S.need), 4);
+  if (S.flash) { c.fillStyle = `rgba(255,255,255,${S.flash * .6})`; c.fillRect(0, 0, W, H); }
+}
+</script></body></html>

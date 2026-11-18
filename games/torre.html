@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Torre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 540, H = 900, BH = 34, NL = 10;
+const P = new Engine.Particles();
+let S = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const G = Engine.create({
+  id: 'torre', title: 'Torre', genre: 'Precisión · apilar', accent: '#ff7a59', bg: '#f6efe7',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="14" y="44" width="36" height="10" rx="2"/><rect x="18" y="32" width="30" height="10" rx="2"/><rect x="22" y="20" width="22" height="10" rx="2"/><rect x="30" y="8" width="18" height="10" rx="2"/></svg>',
+  tagline: 'Suelta cada bloque justo encima del anterior. Lo que sobresale, se corta. ¿Hasta dónde llegarás?',
+  help: ['<b>Clic, toque o Espacio</b> para soltar el bloque', 'La parte que sobresale cae al vacío', 'Un encaje <b>perfecto</b> no corta nada; tres seguidos agrandan el bloque', 'Alcanza la altura objetivo; los perfectos dan estrellas'],
+  levels: NL, maxScale: 1.1,
+  song: { bpm: 112, root: 53, scale: 'major', prog: [0, 4, 5, 3], padInst: 'padSoft', arpInst: 'marimba', arp: 'x.x.x.x.x.x.x.xx', arpOct: 5, leadInst: 'piano', leadOct: 5, leadDensity: .45,
+    kick: 'x...x...x...x...', snare: '....x.......x...', clap: true, hat: '..x...x...x...x.', bass: 'x..x..x.x..x..x.', bassInst: 'bassPluck', bassLen: 2, seed: 23 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    g.cv.addEventListener('pointerdown', drop);
+    addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowDown') drop(); });
+  }
+});
+
+function load(n) {
+  const baseW = n >= 7 ? 220 : 260;
+  S = { n, target: 8 + n * 3, speed: 210 + n * 24, stack: [{ x: (W - baseW) / 2, w: baseW, y: 0 }], cur: null, debris: [], cam: 0, combo: 0, perfects: 0, t: 0, flash: 0, over: false };
+  spawn();
+  P.clear(); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Altura: `${S.stack.length - 1}/${S.target}`, Perfectos: S.perfects }); }
+function spawn() {
+  const top = S.stack[S.stack.length - 1], i = S.stack.length;
+  const fromLeft = i % 2 === 1;
+  S.cur = { x: fromLeft ? -top.w : W, w: top.w, y: top.y + 1, dir: fromLeft ? 1 : -1, t: 0 };
+}
+const blockY = level => H - 120 - level * BH;
+function drop() {
+  if (!S || !G.playing || G.paused || !S.cur || S.over) return;
+  const cur = S.cur, top = S.stack[S.stack.length - 1];
+  const L = Math.max(cur.x, top.x), R = Math.min(cur.x + cur.w, top.x + top.w);
+  const level = S.stack.length, sy = blockY(level);
+  if (R - L <= 0) {
+    S.debris.push({ x: cur.x, y: sy, w: cur.w, vy: 0, vx: cur.dir * 60, rot: 0, vr: cur.dir * 2, hue: hue(level) });
+    S.cur = null; S.over = true;
+    G.sfx('thud', { pitch: .7 }); G.sfx('whoosh', { pitch: .6 });
+    later(() => G.lose('La torre se detuvo', [['Altura', `${S.stack.length - 1}/${S.target}`], ['Perfectos', S.perfects]]), 900);
+    return;
+  }
+  let nx = L, nw = R - L;
+  if (Math.abs(cur.x - top.x) < 6) {
+    nx = top.x; nw = top.w; S.combo++; S.perfects++;
+    if (S.combo >= 3) { const g = Math.min(16, 300 - nw); nx -= g / 2; nw += g; }
+    S.flash = .35;
+    G.sfx('combo', { pitch: 1 + Math.min(S.combo, 10) * .06, pan: G.pan(nx + nw / 2) });
+    P.burst(nx + nw / 2, sy + BH / 2, 22, { color: ['#ffffff', hue(level, 70)], speed: 240, life: .5, shape: 'square', size: 5 });
+    if (S.combo >= 2) P.text(nx + nw / 2, sy - 10, `¡Perfecto x${S.combo}!`, { color: '#ff7a59', size: 22 });
+  } else {
+    S.combo = 0;
+    const cutX = cur.x < top.x ? cur.x : R, cutW = cur.w - nw;
+    S.debris.push({ x: cutX, y: sy, w: cutW, vy: 0, vx: (cur.x < top.x ? -1 : 1) * 70, rot: 0, vr: (cur.x < top.x ? -1 : 1) * (1 + Math.random() * 2), hue: hue(level) });
+    G.sfx('snap', { pan: G.pan(cutX + cutW / 2) });
+    G.sfx('thud', { pitch: .9 + Math.random() * .2, pan: G.pan(nx + nw / 2) });
+  }
+  S.stack.push({ x: nx, w: nw, y: level, drop: .18 });
+  S.cur = null; hud();
+  const h = S.stack.length - 1;
+  G.music.setIntensity(h >= S.target * .6 ? 2 : 1);
+  if (h >= S.target) {
+    S.over = true;
+    const ratio = S.perfects / S.target;
+    const stars = ratio >= .45 ? 3 : ratio >= .2 ? 2 : 1;
+    later(() => G.win(stars, [['Altura', h], ['Perfectos', `${S.perfects}/${S.target}`], ['Mejor combo', S.combo]], h * 10 + S.perfects * 50), 500);
+    return;
+  }
+  later(() => { if (!S.over) spawn(); }, 120);
+}
+const hue = (l, light = 62) => `hsl(${(20 + l * 13) % 360},72%,${light}%)`;
+function update(dt) {
+  S.t += dt; S.flash = Math.max(0, S.flash - dt);
+  const cur = S.cur;
+  if (cur) {
+    cur.t += dt;
+    let sp = S.speed;
+    if (S.n >= 4) sp *= 1 + .45 * Math.sin(cur.t * 2.4);
+    cur.x += cur.dir * sp * dt;
+    if (cur.x > W - cur.w + 40 && cur.dir > 0) cur.dir = -1;
+    if (cur.x < -40 && cur.dir < 0) cur.dir = 1;
+  }
+  for (const s of S.stack) if (s.drop) s.drop = Math.max(0, s.drop - dt);
+  for (const d of S.debris) { d.vy += 1600 * dt; d.y += d.vy * dt; d.x += d.vx * dt; d.rot += d.vr * dt; }
+  S.debris = S.debris.filter(d => d.y < H + 400 - S.cam);
+  const topY = blockY(S.stack.length);
+  const want = Math.min(0, topY - H * .38);
+  S.cam += (want - S.cam) * Math.min(1, dt * 5);
+  P.update(dt);
+}
+function block(c, x, y, w, col, side) {
+  c.fillStyle = side; c.fillRect(x, y + BH - 8, w, 8);
+  c.fillStyle = col; c.fillRect(x, y, w, BH - 8);
+  c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x, y, w, 3);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  const h = S.stack.length, k = Math.min(1, h / 40);
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `hsl(${30 - k * 220},${45 - k * 20}%,${93 - k * 70}%)`); g.addColorStop(1, `hsl(30,40%,${96 - k * 50}%)`);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  if (k > .5) for (let i = 0; i < 60; i++) { c.fillStyle = `rgba(255,255,255,${(k - .5) * 1.2})`; c.fillRect((i * 97) % W, (i * 151 + S.cam * .1) % H, 2, 2); }
+  c.save(); c.translate(0, -S.cam);
+  c.fillStyle = '#3a3330'; c.fillRect(0, blockY(0) + BH - 8, W, 400);
+  S.stack.forEach((s, i) => {
+    const off = s.drop ? -s.drop * 60 : 0;
+    block(c, s.x, blockY(i) + off, s.w, i === 0 ? '#5b514c' : hue(i), i === 0 ? '#3a3330' : hue(i, 45));
+  });
+  if (S.cur) {
+    const lv = S.stack.length, top = S.stack[lv - 1];
+    c.strokeStyle = 'rgba(0,0,0,.12)'; c.setLineDash([5, 6]); c.strokeRect(top.x, blockY(lv), top.w, BH - 8); c.setLineDash([]);
+    block(c, S.cur.x, blockY(lv), S.cur.w, hue(lv), hue(lv, 45));
+  }
+  for (const d of S.debris) { c.save(); c.translate(d.x + d.w / 2, d.y + BH / 2); c.rotate(d.rot); block(c, -d.w / 2, -BH / 2, d.w, d.hue, 'rgba(0,0,0,.2)'); c.restore(); }
+  const ty = blockY(S.target) - 4;
+  c.strokeStyle = '#ff7a59'; c.lineWidth = 2; c.setLineDash([10, 8]); c.beginPath(); c.moveTo(0, ty); c.lineTo(W, ty); c.stroke(); c.setLineDash([]);
+  c.fillStyle = '#ff7a59'; c.font = '600 14px Inter, sans-serif'; c.textAlign = 'right'; c.fillText('META', W - 12, ty - 8);
+  P.draw(c);
+  c.restore();
+  if (S.flash) { c.fillStyle = `rgba(255,255,255,${S.flash * .5})`; c.fillRect(0, 0, W, H); }
+  c.fillStyle = 'rgba(0,0,0,.08)'; c.font = '700 120px Inter, sans-serif'; c.textAlign = 'center'; c.fillText(S.stack.length - 1, W / 2, 170);
+}
+</script></body></html>

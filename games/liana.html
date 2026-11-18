@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Liana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 540, H = 800, FR = 22, GRAV = 1500, STEP = 1 / 60, SEGS = 12;
+// a = anclajes de las lianas, f = fruta, k = semillas, b = cesta, h = ganchos [x,y,radio], u = rebotadores [x,y,r], s = pinchos [x,y,ancho]
+const LEVELS = [
+  {"a":[[270,90]],"f":[270,280],"k":[[270,400],[270,500],[270,600]],"b":[270,725,130]},
+  {"a":[[110,110],[430,110]],"f":[270,300],"k":[[270,420],[270,520],[270,620]],"b":[270,725,130]},
+  {"a":[[130,110],[410,170]],"f":[230,330],"k":[[330,430],[380,540],[410,640]],"b":[410,725,130]},
+  {"a":[[270,90]],"f":[270,240],"h":[[330,440,80]],"k":[[270,330],[360,560],[400,640]],"b":[420,725,130]},
+  {"a":[[100,100],[300,100]],"f":[200,280],"s":[[0,600,220]],"k":[[260,420],[340,540],[400,640]],"b":[420,725,130]},
+  {"a":[[270,80]],"f":[270,230],"u":[[300,470,34]],"k":[[270,340],[200,560],[130,640]],"b":[110,725,130]},
+  {"a":[[80,120],[460,120],[270,60]],"f":[270,300],"s":[[180,620,180]],"k":[[350,420],[420,540],[455,640]],"b":[455,725,120]},
+  {"a":[[120,100]],"f":[300,160],"h":[[400,420,70]],"s":[[200,690,140]],"k":[[153,297],[41,390],[71,566]],"b":[110,725,120]},
+  {"a":[[270,70],[150,200]],"f":[270,260],"u":[[150,520,30],[390,560,30]],"k":[[331,299],[373,430],[447,574]],"b":[400,725,120]},
+  {"a":[[100,90],[440,90],[270,420]],"f":[270,250],"h":[[270,500,60]],"s":[[0,560,200],[340,560,200]],"k":[[58,331],[235,382],[264,550]],"b":[270,725,120]}
+];
+const P = new Engine.Particles();
+let S = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+
+/* ------- física (paso fijo, determinista) ------- */
+function makeWorld(L) {
+  const w = { L, f: { x: L.f[0], y: L.f[1], px: L.f[0], py: L.f[1] }, ropes: [], hooks: (L.h || []).map(h => ({ x: h[0], y: h[1], r: h[2], used: false })),
+    seeds: L.k.map(s => ({ x: s[0], y: s[1], got: false })), t: 0, state: 'play', got: 0, events: [] };
+  for (const a of L.a) addRope(w, a[0], a[1], 1.02);
+  return w;
+}
+function addRope(w, ax, ay, slack) {
+  const f = w.f, len = Math.hypot(f.x - ax, f.y - ay) * slack, seg = len / SEGS, pts = [];
+  for (let i = 0; i < SEGS; i++) { const k = i / SEGS; const x = ax + (f.x - ax) * k, y = ay + (f.y - ay) * k; pts.push({ x, y, px: x, py: y, pin: i === 0 }); }
+  w.ropes.push({ pts, links: new Array(SEGS).fill(true), seg, cut: false });
+}
+function attached(r) { return r.links.every(Boolean); }
+function stepWorld(w) {
+  if (w.state !== 'play') return;
+  w.t += STEP;
+  const integ = (p, g) => { const vx = (p.x - p.px) * .995, vy = (p.y - p.py) * .995; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g * STEP * STEP; };
+  integ(w.f, GRAV);
+  for (const r of w.ropes) for (const p of r.pts) if (!p.pin) integ(p, GRAV);
+  for (let it = 0; it < 16; it++) for (const r of w.ropes) {
+    for (let i = 0; i < SEGS; i++) {
+      if (!r.links[i]) continue;
+      const a = r.pts[i], b = i + 1 < SEGS ? r.pts[i + 1] : w.f, fruit = i + 1 >= SEGS;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || .001, diff = (d - r.seg) / d;
+      if (fruit && d < r.seg) continue;
+      const wa = a.pin ? 0 : 1, wb = fruit ? .25 : 1, s = wa + wb; if (!s) continue;
+      a.x += dx * diff * wa / s; a.y += dy * diff * wa / s; b.x -= dx * diff * wb / s; b.y -= dy * diff * wb / s;
+    }
+  }
+  const f = w.f;
+  for (const u of w.L.u || []) {
+    const dx = f.x - u[0], dy = f.y - u[1], d = Math.hypot(dx, dy);
+    if (d < u[2] + FR) {
+      const nx = dx / d, ny = dy / d, vx = f.x - f.px, vy = f.y - f.py, vn = vx * nx + vy * ny;
+      f.x = u[0] + nx * (u[2] + FR); f.y = u[1] + ny * (u[2] + FR);
+      if (vn < 0) { const rx = vx - 2.05 * vn * nx, ry = vy - 2.05 * vn * ny; f.px = f.x - rx; f.py = f.y - ry; w.events.push(['bump', u[0], u[1]]); }
+    }
+  }
+  for (const h of w.hooks) if (!h.used && Math.hypot(f.x - h.x, f.y - h.y) < h.r) { h.used = true; addRope(w, h.x, h.y, 1); w.events.push(['hook', h.x, h.y]); }
+  for (const s of w.seeds) if (!s.got && Math.hypot(s.x - f.x, s.y - f.y) < FR + 12) { s.got = true; w.got++; w.events.push(['seed', s.x, s.y]); }
+  for (const s of w.L.s || []) if (f.x > s[0] - FR * .6 && f.x < s[0] + s[2] + FR * .6 && f.y > s[1] - FR && f.y < s[1] + 22) { w.state = 'spike'; w.events.push(['spike', f.x, f.y]); return; }
+  const [bx, by, bw] = w.L.b;
+  if (f.y > by - 18 && f.y < by + 20 && Math.abs(f.x - bx) < bw / 2 - 12 && f.y - f.py > 0) { w.state = 'win'; w.events.push(['win', f.x, f.y]); return; }
+  if (f.y > H + 60 || f.x < -80 || f.x > W + 80 || f.y < -300) { w.state = 'lost'; w.events.push(['lost', f.x, f.y]); }
+}
+function cutRope(w, r, i) { if (!r.links[i]) return false; r.links[i] = false; r.cut = true; return true; }
+
+const G = Engine.create({
+  id: 'liana', title: 'Liana', genre: 'Física · cortar', accent: '#e8862d', bg: '#eef5e6',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="14" cy="8" r="3" fill="currentColor"/><circle cx="50" cy="8" r="3" fill="currentColor"/><path d="M14 8c6 14 12 18 18 22M50 8c-4 12-10 18-18 22"/><circle cx="32" cy="36" r="9" fill="currentColor"/><path d="M18 52h28l-4 8H22z"/></svg>',
+  tagline: 'Corta las lianas en el momento exacto para que la fruta se balancee, rebote y caiga en la cesta.',
+  help: ['<b>Desliza</b> sobre una liana para cortarla', 'La fruta se balancea: el momento del corte decide su vuelo', 'Los <b>ganchos</b> la atrapan con una liana nueva y los <b>rebotadores</b> la desvían', 'Recoge las 3 semillas para ★★★ y evita los pinchos'],
+  levels: LEVELS.length, maxScale: 1.15,
+  song: { bpm: 104, root: 55, scale: 'major', prog: [0, 3, 4, 0], padInst: 'padSoft', arpInst: 'marimba', arp: 'x.xx.x.xx.xx.x.x', arpOct: 5, leadInst: 'flute', leadOct: 5, leadDensity: .4,
+    kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x..x....x..x....', bassInst: 'bassPluck', bassLen: 2, seed: 109 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    let last = null;
+    g.cv.addEventListener('pointerdown', e => { last = g.pos(e); g.cv.setPointerCapture(e.pointerId); S && (S.trail = [last]); });
+    g.cv.addEventListener('pointermove', e => { if (!last || !S) return; const p = g.pos(e); swipe(last, p); last = p; S.trail.push(p); if (S.trail.length > 12) S.trail.shift(); });
+    g.cv.addEventListener('pointerup', () => { last = null; });
+  }
+});
+function load(n) {
+  S = { n, w: makeWorld(LEVELS[n - 1]), acc: 0, trail: [], t: 0, ended: false };
+  P.clear(); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${LEVELS.length}`, Semillas: `${S.w.got}/3` }); }
+function segHit(p1, p2, a, b) {
+  const d = (x1, y1, x2, y2, x3, y3) => (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+  const d1 = d(a.x, a.y, b.x, b.y, p1.x, p1.y), d2 = d(a.x, a.y, b.x, b.y, p2.x, p2.y), d3 = d(p1.x, p1.y, p2.x, p2.y, a.x, a.y), d4 = d(p1.x, p1.y, p2.x, p2.y, b.x, b.y);
+  return (d1 > 0) !== (d2 > 0) && (d3 > 0) !== (d4 > 0);
+}
+function swipe(p1, p2) {
+  if (!S || S.ended || !G.playing || G.paused) return;
+  const w = S.w;
+  if (Math.hypot(p2.x - p1.x, p2.y - p1.y) > 2) { if (Math.random() < .15) G.sfx('swish', { vol: .5, pan: G.pan(p2.x) }); }
+  for (const r of w.ropes) for (let i = 0; i < SEGS; i++) {
+    if (!r.links[i]) continue;
+    const a = r.pts[i], b = i + 1 < SEGS ? r.pts[i + 1] : w.f;
+    if (segHit(p1, p2, a, b) && cutRope(w, r, i)) { G.sfx('snap', { pan: G.pan(a.x) }); P.burst(a.x, a.y, 8, { color: ['#6b8f3a', '#a0c25a'], speed: 120, life: .4, shape: 'square', size: 3 }); }
+  }
+}
+function update(dt) {
+  S.t += dt; S.acc += dt;
+  while (S.acc >= STEP) { S.acc -= STEP; stepWorld(S.w); }
+  for (const [k, x, y] of S.w.events) {
+    if (k === 'seed') { G.sfx('pickup', { pitch: 1 + S.w.got * .12, pan: G.pan(x) }); P.burst(x, y, 14, { color: ['#7bd14a', '#ffffff'], speed: 150, life: .5 }); hud(); G.music.setIntensity(S.w.got >= 2 ? 2 : 1); }
+    if (k === 'hook') { G.sfx('clack', { pitch: 1.3, pan: G.pan(x) }); }
+    if (k === 'bump') { G.sfx('pop', { pan: G.pan(x) }); P.burst(x, y, 8, { color: '#ff9fb7', speed: 140, life: .3 }); }
+    if (k === 'spike' && !S.ended) { S.ended = true; G.sfx('hit'); G.sfx('thud'); P.burst(x, y, 30, { color: ['#e8862d', '#ffcf6b'], speed: 260 }); later(() => G.lose('La fruta se pinchó', [['Semillas', `${S.w.got}/3`]]), 700); }
+    if (k === 'lost' && !S.ended) { S.ended = true; G.sfx('whoosh', { pitch: .5 }); later(() => G.lose('La fruta se perdió', [['Semillas', `${S.w.got}/3`]]), 300); }
+    if (k === 'win' && !S.ended) { S.ended = true; G.sfx('thud', { pitch: 1.4 }); G.sfx('chime'); P.burst(x, y, 30, { color: ['#e8862d', '#7bd14a', '#ffffff'], speed: 220 }); later(() => G.win(Math.max(1, S.w.got), [['Semillas', `${S.w.got}/3`], ['Tiempo', S.t.toFixed(1) + ' s']], S.w.got * 100), 600); }
+  }
+  S.w.events.length = 0;
+  P.update(dt);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  const w = S.w, L = w.L, t = performance.now() / 1000;
+  c.fillStyle = '#eef5e6'; c.fillRect(0, 0, W, H);
+  c.fillStyle = 'rgba(123,209,74,.08)'; for (let i = 0; i < 8; i++) { c.beginPath(); c.arc((i * 173) % W, 120 + (i * 211) % 600, 60 + i * 6, 0, 6.283); c.fill(); }
+  for (const h of w.hooks) {
+    c.strokeStyle = h.used ? 'rgba(107,143,58,.15)' : 'rgba(107,143,58,.5)'; c.setLineDash([4, 6]); c.lineWidth = 2; c.beginPath(); c.arc(h.x, h.y, h.r, 0, 6.283); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#6b8f3a'; c.beginPath(); c.arc(h.x, h.y, 7, 0, 6.283); c.fill();
+  }
+  for (const u of L.u || []) { c.fillStyle = '#ff9fb7'; c.beginPath(); c.arc(u[0], u[1], u[2], 0, 6.283); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; c.beginPath(); c.arc(u[0], u[1], u[2] * .55, 0, 6.283); c.fill(); }
+  for (const s of L.s || []) { c.fillStyle = '#7b7f86'; c.beginPath(); for (let x = s[0]; x < s[0] + s[2]; x += 18) { c.moveTo(x, s[1] + 22); c.lineTo(x + 9, s[1]); c.lineTo(x + 18, s[1] + 22); } c.fill(); }
+  const [bx, by, bw] = L.b;
+  c.fillStyle = '#c98b4a'; c.beginPath(); c.moveTo(bx - bw / 2, by); c.lineTo(bx + bw / 2, by); c.lineTo(bx + bw / 2 - 16, by + 52); c.lineTo(bx - bw / 2 + 16, by + 52); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.15)'; c.lineWidth = 2; for (let y = by + 12; y < by + 52; y += 12) { c.beginPath(); c.moveTo(bx - bw / 2 + 6, y); c.lineTo(bx + bw / 2 - 6, y); c.stroke(); }
+  c.fillStyle = '#a86f35'; c.fillRect(bx - bw / 2 - 4, by - 6, bw + 8, 10);
+  for (const s of w.seeds) if (!s.got) { const b = Math.sin(t * 3 + s.x) * 3; c.fillStyle = 'rgba(123,209,74,.25)'; c.beginPath(); c.arc(s.x, s.y + b, 16, 0, 6.283); c.fill(); c.fillStyle = '#5aa52f'; c.beginPath(); c.ellipse(s.x, s.y + b, 7, 10, .4, 0, 6.283); c.fill(); }
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  for (const r of w.ropes) {
+    c.strokeStyle = '#6b8f3a'; c.lineWidth = 4;
+    c.beginPath(); let open = false;
+    for (let i = 0; i < SEGS; i++) {
+      const a = r.pts[i], b = i + 1 < SEGS ? r.pts[i + 1] : w.f;
+      if (!r.links[i]) { open = false; continue; }
+      if (!open) { c.moveTo(a.x, a.y); open = true; }
+      c.lineTo(b.x, b.y);
+    }
+    c.stroke();
+    const a0 = r.pts[0]; c.fillStyle = '#3f5a22'; c.beginPath(); c.arc(a0.x, a0.y, 6, 0, 6.283); c.fill();
+  }
+  const f = w.f;
+  if (w.state !== 'spike') {
+    c.fillStyle = 'rgba(0,0,0,.1)'; c.beginPath(); c.ellipse(f.x + 3, f.y + 5, FR, FR * .9, 0, 0, 6.283); c.fill();
+    const g = c.createRadialGradient(f.x - 7, f.y - 8, 3, f.x, f.y, FR); g.addColorStop(0, '#ffcf6b'); g.addColorStop(1, '#e8862d');
+    c.fillStyle = g; c.beginPath(); c.arc(f.x, f.y, FR, 0, 6.283); c.fill();
+    c.fillStyle = '#5aa52f'; c.beginPath(); c.ellipse(f.x + 6, f.y - FR - 2, 8, 4, -.5, 0, 6.283); c.fill();
+  }
+  if (S.trail.length > 1) { c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 3; c.beginPath(); c.moveTo(S.trail[0].x, S.trail[0].y); for (const p of S.trail) c.lineTo(p.x, p.y); c.stroke(); }
+  P.draw(c);
+}
+</script></body></html>

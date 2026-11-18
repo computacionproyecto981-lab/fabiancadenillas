@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pixelgrama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css">
+<style>.mode{display:flex;gap:4px;background:rgba(0,0,0,.05);border-radius:999px;padding:4px}.mode button{border:0;background:transparent;padding:8px 16px;border-radius:999px;font-weight:600;cursor:pointer}.mode button.on{background:#141414;color:#fff}</style>
+</head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const PICS = [
+  { name: 'Corazón', col: '#e5484d', rows: ['.#.#.', '#####', '#####', '.###.', '..#..'] },
+  { name: 'Casa', col: '#d98b3a', rows: ['..#..', '.###.', '#####', '.#.#.', '.#.#.'] },
+  { name: 'Sonrisa', col: '#e0b020', rows: ['.####.', '#.##.#', '######', '#.##.#', '##..##', '.####.'] },
+  { name: 'Árbol', col: '#3c9a5f', rows: ['...#...', '..###..', '.#####.', '..###..', '.#####.', '#######', '...#...'] },
+  { name: 'Gato', col: '#7a5cc4', rows: ['#......#', '##....##', '########', '#.#..#.#', '########', '##.##.##', '.######.', '..####..'] },
+  { name: 'Velero', col: '#2f6df6', rows: ['...#....', '...##...', '...###..', '...####.', '...#....', '########', '.######.', '..####..'] },
+  { name: 'Seta', col: '#d94b4b', rows: ['...####...', '..######..', '.##.##.##.', '##########', '#.######.#', '##########', '...#..#...', '...####...', '...####...', '..######..'] },
+  { name: 'Nota musical', col: '#141414', rows: ['....######', '....######', '....#....#', '....#....#', '....#....#', '....#....#', '..###..###', '.####.####', '.####.####', '..##...##.'] },
+  { name: 'Pez', col: '#1fa2b8', rows: ['..........', '...##.....', '..####...#', '.######.##', '##.#######', '##########', '.######.##', '..####...#', '...##.....', '..........'] },
+  { name: 'Cohete', col: '#e05a47', rows: ['....##....', '...####...', '...####...', '..##..##..', '..##..##..', '..######..', '..######..', '.########.', '##.####.##', '#..#..#..#'] }
+];
+const P = new Engine.Particles();
+let S = null, modeEl;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const runs = arr => { const r = []; let c = 0; for (const v of arr) { if (v === 1) c++; else if (c) { r.push(c); c = 0; } } if (c) r.push(c); return r.length ? r : [0]; };
+const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+const G = Engine.create({
+  id: 'pixelgrama', title: 'Pixelgrama', genre: 'Lógica · dibujo oculto', accent: '#141414', bg: '#f5f3ef',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><rect x="18" y="18" width="40" height="40" rx="3"/><path d="M18 31h40M18 45h40M31 18v40M45 18v40"/><rect x="31" y="31" width="14" height="14" fill="currentColor"/><path d="M6 24h6M6 38h6M24 6v6M38 6v6"/></svg>',
+  tagline: 'Usa los números de cada fila y columna para deducir qué casillas pintar y descubre el dibujo escondido.',
+  help: ['Los números indican los <b>grupos de casillas pintadas</b> seguidas, en orden', '<b>Clic</b> pinta · <b>clic derecho</b> marca una X (casilla vacía)', 'Arrastra para pintar varias casillas de una vez', 'Termina por debajo del tiempo objetivo para ★★★'],
+  levels: PICS.length, maxScale: 1.4,
+  song: { bpm: 72, root: 60, scale: 'major', prog: [0, 5, 3, 4], padInst: 'padSoft', arpInst: 'bell', arp: 'x...x...x...x...', arpOct: 5, leadInst: 'piano', leadOct: 5, leadDensity: .3, leadAlways: true,
+    kick: '', snare: '', hat: '', bass: 'x.......x.......', bassInst: 'bassSub', bassLen: 7, seed: 97 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    modeEl = document.createElement('div'); modeEl.className = 'mode';
+    modeEl.innerHTML = '<button class="on" data-m="1">■ Pintar</button><button data-m="2">✕ Marcar</button>';
+    modeEl.onclick = e => { const b = e.target.closest('button'); if (!b) return; S && (S.mode = +b.dataset.m); [...modeEl.children].forEach(x => x.classList.toggle('on', x === b)); G.sfx('click'); };
+    g.stage.append(modeEl);
+    g.loop(update, render);
+    addEventListener('contextmenu', e => { if (e.target === g.cv) e.preventDefault(); });
+    addEventListener('pointerdown', e => { if (e.target === g.cv) down(e); });
+    addEventListener('pointermove', move);
+    addEventListener('pointerup', () => { if (S) S.paint = null; });
+  }
+});
+function load(n) {
+  const pic = PICS[n - 1], N = pic.rows.length;
+  const sol = pic.rows.map(r => [...r].map(ch => ch === '#' ? 1 : 0));
+  const rc = sol.map(r => runs(r)), cc = sol[0].map((_, x) => runs(sol.map(r => r[x])));
+  const cell = N <= 5 ? 64 : N <= 7 ? 54 : N <= 8 ? 48 : 42;
+  const cw = Math.max(...rc.map(r => r.length)) * 20 + 22, ch = Math.max(...cc.map(c => c.length)) * 22 + 18;
+  S = { n, pic, N, sol, rc, cc, cell, cw, ch, grid: sol.map(r => r.map(() => 0)), mode: S ? S.mode : 1, paint: null, t: 0, done: false, reveal: 0, rowOk: [], colOk: [], par: N * N * 1.1 + 15 };
+  G.canvas(cw + N * cell + 24, ch + N * cell + 24);
+  check(true); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${PICS.length}`, Tamaño: `${S.N}×${S.N}`, Tiempo: Math.floor(S.t) + ' s', Objetivo: Math.round(S.par) + ' s' }); }
+function cellAt(e) { const p = G.pos(e); const x = Math.floor((p.x - S.cw) / S.cell), y = Math.floor((p.y - S.ch) / S.cell); return x >= 0 && y >= 0 && x < S.N && y < S.N ? [x, y] : null; }
+function down(e) {
+  if (!S || S.done || !G.playing || G.paused) return;
+  const c = cellAt(e); if (!c) return;
+  const kind = e.button === 2 ? 2 : S.mode;
+  const cur = S.grid[c[1]][c[0]];
+  S.paint = { kind, value: cur === kind ? 0 : kind, start: c, axis: null };
+  apply(c);
+}
+function move(e) {
+  if (!S || !S.paint) return;
+  const c = cellAt(e); if (!c) return;
+  const p = S.paint;
+  if (!p.axis && (c[0] !== p.start[0] || c[1] !== p.start[1])) p.axis = c[0] !== p.start[0] ? 'x' : 'y';
+  if (p.axis === 'x') c[1] = p.start[1]; else if (p.axis === 'y') c[0] = p.start[0];
+  apply(c);
+}
+function apply([x, y]) {
+  const p = S.paint; if (S.grid[y][x] === p.value) return;
+  if (p.value !== 0 && S.grid[y][x] !== 0 && S.grid[y][x] !== p.kind) return;
+  S.grid[y][x] = p.value;
+  if (p.value === 1) G.sfx('wood', { pitch: 1 + (S.N - y) * .04, pan: G.pan(S.cw + x * S.cell) });
+  else if (p.value === 2) G.sfx('tick', { pitch: 1.2 });
+  else G.sfx('click', { pitch: .8 });
+  check(false);
+}
+function check(init) {
+  const fill = r => r.map(v => v === 1 ? 1 : 0);
+  let all = true;
+  for (let y = 0; y < S.N; y++) {
+    const ok = same(runs(fill(S.grid[y])), S.rc[y]);
+    if (ok && !S.rowOk[y] && !init) { G.sfx('chime', { pitch: 1 + y * .03 }); }
+    S.rowOk[y] = ok; all = all && ok;
+  }
+  for (let x = 0; x < S.N; x++) {
+    const ok = same(runs(fill(S.grid.map(r => r[x]))), S.cc[x]);
+    if (ok && !S.colOk[x] && !init) { G.sfx('chime', { pitch: 1.2 + x * .03 }); }
+    S.colOk[x] = ok; all = all && ok;
+  }
+  if (all && !init && !S.done) {
+    S.done = true; S.paint = null;
+    G.sfx('sparkle'); G.music.setIntensity(2);
+    const stars = S.t <= S.par ? 3 : S.t <= S.par * 1.8 ? 2 : 1;
+    later(() => G.win(stars, [['Dibujo', S.pic.name], ['Tiempo', S.t.toFixed(0) + ' s'], ['Objetivo', Math.round(S.par) + ' s']], Math.max(0, Math.round(S.par * 3 - S.t))), 1300);
+  }
+}
+function update(dt) {
+  if (!S.done) { const p = Math.floor(S.t); S.t += dt; if (Math.floor(S.t) !== p) hud(); }
+  else S.reveal = Math.min(1, S.reveal + dt * 1.5);
+  P.update(dt);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  const { N, cell, cw, ch } = S, W = G.cv.width, H = G.cv.height;
+  c.fillStyle = '#f5f3ef'; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#ffffff'; c.beginPath(); c.roundRect(cw - 6, ch - 6, N * cell + 12, N * cell + 12, 10); c.fill();
+  c.font = '600 15px Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  S.rc.forEach((r, y) => r.forEach((v, i) => { c.fillStyle = S.rowOk[y] ? 'rgba(0,0,0,.25)' : '#141414'; c.fillText(v, cw - 14 - (r.length - 1 - i) * 20, ch + y * cell + cell / 2); }));
+  S.cc.forEach((col, x) => col.forEach((v, i) => { c.fillStyle = S.colOk[x] ? 'rgba(0,0,0,.25)' : '#141414'; c.fillText(v, cw + x * cell + cell / 2, ch - 14 - (col.length - 1 - i) * 22); }));
+  c.textBaseline = 'alphabetic';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const v = S.grid[y][x], px = cw + x * cell, py = ch + y * cell;
+    if (v === 1) { c.fillStyle = S.done ? mix(S.reveal) : '#141414'; c.beginPath(); c.roundRect(px + 2, py + 2, cell - 4, cell - 4, 5); c.fill(); }
+    else if (v === 2 && !S.done) { c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 2; const m = cell * .32; c.beginPath(); c.moveTo(px + m, py + m); c.lineTo(px + cell - m, py + cell - m); c.moveTo(px + cell - m, py + m); c.lineTo(px + m, py + cell - m); c.stroke(); }
+  }
+  if (!S.done) {
+    for (let i = 0; i <= N; i++) {
+      c.strokeStyle = i % 5 === 0 ? 'rgba(0,0,0,.35)' : 'rgba(0,0,0,.1)'; c.lineWidth = i % 5 === 0 ? 1.5 : 1;
+      c.beginPath(); c.moveTo(cw + i * cell, ch); c.lineTo(cw + i * cell, ch + N * cell); c.moveTo(cw, ch + i * cell); c.lineTo(cw + N * cell, ch + i * cell); c.stroke();
+    }
+  } else {
+    c.fillStyle = `rgba(20,20,20,${S.reveal})`; c.font = '700 18px Inter, sans-serif'; c.textAlign = 'left'; c.fillText(S.pic.name, 14, 28);
+  }
+  P.draw(c);
+}
+function mix(k) {
+  const h = S.pic.col.slice(1), a = [20, 20, 20], b = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(',')})`;
+}
+</script></body></html>

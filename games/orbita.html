@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Órbita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 540, H = 900, NL = 10;
+const P = new Engine.Particles();
+let S = null;
+const G = Engine.create({
+  id: 'orbita', title: 'Órbita', genre: 'Un botón · espacio', accent: '#8b7bff', bg: '#0d0e1a', dark: true,
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><circle cx="32" cy="32" r="10"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(-25 32 32)"/><circle cx="54" cy="22" r="3" fill="currentColor"/></svg>',
+  tagline: 'Gira alrededor de cada planeta y suéltate en el momento justo para alcanzar el siguiente.',
+  help: ['<b>Clic, toque o Espacio</b> para soltarte de la órbita', 'Sales disparado en línea recta, tangente a tu giro', 'Recoge el polvo estelar y esquiva los asteroides', 'Llega al planeta dorado de la cima'],
+  levels: NL, maxScale: 1.1,
+  song: { bpm: 84, root: 50, scale: 'lyd', prog: [0, 1, 4, 3], padInst: 'padSaw', arpInst: 'bell', arp: 'x..x..x.x..x..x.', arpOct: 5, leadInst: 'flute', leadOct: 5, leadDensity: .3,
+    kick: 'x.......x.......', hat: '....x.......x..x', bass: 'x.......x.......', bassInst: 'bassSub', bassLen: 6, seed: 11 },
+  intensity: () => 1,
+  onLevel: load,
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    g.cv.addEventListener('pointerdown', release);
+    addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowUp') release(); });
+  }
+});
+
+function load(n) {
+  const r = Engine.rng(n * 977 + 3);
+  const planets = [];
+  let y = H - 170;
+  const count = 5 + n * 2;
+  for (let i = 0; i < count; i++) {
+    const goal = i === count - 1;
+    const rad = goal ? 34 : 22 + r() * 22;
+    const x = 100 + r() * (W - 200);
+    const moving = !goal && i > 0 && n >= 3 && r() < .2 + n * .05;
+    planets.push({ x, bx: x, y, r: rad, orb: rad + 30, spin: (1.5 + n * .1 + r() * .5) * (i % 2 ? -1 : 1), amp: moving ? 50 + r() * 70 : 0, ph: r() * 6, sp: .6 + r() * .6, goal, hue: (i * 47 + n * 30) % 360 });
+    if (i < count - 1) y -= 230 + r() * 60 + n * 4;
+  }
+  const dust = [];
+  for (let i = 0; i < count - 1; i++) {
+    const a = planets[i], b = planets[i + 1];
+    const k = 2 + (r() < .4 ? 1 : 0);
+    for (let j = 1; j <= k; j++) { const t = j / (k + 1); dust.push({ x: a.bx + (b.bx - a.bx) * t + (r() - .5) * 40, y: a.y + (b.y - a.y) * t, got: false }); }
+  }
+  const rocks = [];
+  if (n >= 4) for (let i = 1; i < count - 1; i += Math.max(1, 4 - Math.floor(n / 3))) {
+    const a = planets[i], b = planets[i + 1];
+    rocks.push({ x: r() * W, y: (a.y + b.y) / 2 + (r() - .5) * 40, vx: (80 + r() * 60 + n * 8) * (r() < .5 ? -1 : 1), r: 12 + r() * 8, rot: 0 });
+  }
+  S = { n, planets, dust, rocks, lives: 3, got: 0, cam: 0, t: 0, combo: 0, trail: [], stars: makeStars(r) };
+  attach(0, -Math.PI / 2, 1);
+  S.cam = S.p.y - H * .7;
+  P.clear(); hud();
+}
+function makeStars(r) { const a = []; for (let i = 0; i < 120; i++) a.push({ x: r() * W, y: r() * H * 1.6, s: r() * 1.6 + .3, d: .2 + r() * .5 }); return a; }
+function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Polvo: `${S.got}/${S.dust.length}`, Vidas: '●'.repeat(S.lives) + '○'.repeat(3 - S.lives) }); }
+function attach(i, ang, dir) {
+  const pl = S.planets[i];
+  S.mode = 'orbit'; S.pi = i; S.ang = ang; S.dir = dir; S.safe = i;
+  S.p = { x: pl.x + Math.cos(ang) * pl.orb, y: pl.y + Math.sin(ang) * pl.orb };
+}
+function release() {
+  if (!S || !G.playing || G.paused || S.mode !== 'orbit') return;
+  const pl = S.planets[S.pi], sp = 430 + S.n * 12;
+  const tx = -Math.sin(S.ang) * S.dir, ty = Math.cos(S.ang) * S.dir;
+  S.v = { x: tx * sp + (pl.vx || 0), y: ty * sp };
+  S.mode = 'fly'; S.from = S.pi; S.flyT = 0;
+  G.sfx('whoosh', { pan: G.pan(S.p.x) });
+}
+function crash(msg) {
+  S.lives--; S.combo = 0; hud();
+  G.sfx('explosion', { pan: G.pan(S.p.x), vol: .7 });
+  P.burst(S.p.x, S.p.y, 30, { color: ['#ff6b8b', '#ffd36b', '#ffffff'], speed: 260 });
+  if (S.lives <= 0) { G.lose(msg, [['Polvo estelar', `${S.got}/${S.dust.length}`]]); return; }
+  const pl = S.planets[S.safe];
+  attach(S.safe, -Math.PI / 2, Math.sign(pl.spin) || 1);
+}
+function update(dt) {
+  S.t += dt;
+  for (const pl of S.planets) { pl.x = pl.bx + Math.sin(S.t * pl.sp + pl.ph) * pl.amp; pl.vx = Math.cos(S.t * pl.sp + pl.ph) * pl.amp * pl.sp; }
+  for (const k of S.rocks) { k.x += k.vx * dt; k.rot += dt; if (k.x < -40) k.x = W + 40; if (k.x > W + 40) k.x = -40; }
+  if (S.mode === 'orbit') {
+    const pl = S.planets[S.pi];
+    S.ang += Math.abs(pl.spin) * S.dir * dt;
+    S.p.x = pl.x + Math.cos(S.ang) * pl.orb; S.p.y = pl.y + Math.sin(S.ang) * pl.orb;
+  } else {
+    S.flyT += dt;
+    S.p.x += S.v.x * dt; S.p.y += S.v.y * dt;
+    for (let i = 0; i < S.planets.length; i++) {
+      if (i === S.from && S.flyT < .35) continue;
+      const pl = S.planets[i], dx = S.p.x - pl.x, dy = S.p.y - pl.y, d = Math.hypot(dx, dy);
+      if (d < pl.r + 4) { crash('Te estrellaste'); return; }
+      if (d < pl.orb + 4) {
+        const cross = dx * S.v.y - dy * S.v.x;
+        attach(i, Math.atan2(dy, dx), cross >= 0 ? 1 : -1);
+        if (i !== S.from) S.combo++;
+        G.sfx('chime', { pitch: 1 + Math.min(S.combo, 8) * .06, pan: G.pan(pl.x) });
+        P.burst(S.p.x, S.p.y, 14, { color: `hsl(${pl.hue},90%,75%)`, speed: 150, life: .5 });
+        if (pl.goal) {
+          const ratio = S.got / S.dust.length;
+          const stars = 1 + (ratio >= .5 ? 1 : 0) + (ratio >= .85 && S.lives === 3 ? 1 : 0);
+          G.win(stars, [['Polvo estelar', `${S.got}/${S.dust.length}`], ['Vidas', S.lives], ['Tiempo', S.t.toFixed(1) + ' s']], Math.round(ratio * 1000 + S.lives * 100));
+          return;
+        }
+        G.music.setIntensity(i > S.planets.length / 2 ? 2 : 1);
+        break;
+      }
+    }
+    if (S.mode === 'fly' && (S.p.x < -30 || S.p.x > W + 30 || S.p.y > S.cam + H + 40 || S.p.y < S.cam - 60 || S.flyT > 4)) { crash('Te perdiste en el vacío'); return; }
+  }
+  for (const k of S.rocks) if (Math.hypot(k.x - S.p.x, k.y - S.p.y) < k.r + 7) { crash('Impacto de asteroide'); return; }
+  for (const d of S.dust) if (!d.got && Math.hypot(d.x - S.p.x, d.y - S.p.y) < 20) {
+    d.got = true; S.got++; hud();
+    G.sfx('pickup', { pitch: 1 + (S.got % 5) * .08, pan: G.pan(d.x), vol: .8 });
+    P.burst(d.x, d.y, 8, { color: '#ffe89b', speed: 90, life: .4, size: 3 });
+  }
+  S.trail.push([S.p.x, S.p.y]); if (S.trail.length > 26) S.trail.shift();
+  const target = Math.min(S.cam, S.p.y - H * .62);
+  S.cam += (target - S.cam) * Math.min(1, dt * 4);
+  P.update(dt);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  const t = performance.now() / 1000;
+  c.fillStyle = '#0d0e1a'; c.fillRect(0, 0, W, H);
+  for (const s of S.stars) { const y = ((s.y - S.cam * s.d) % (H * 1.6) + H * 1.6) % (H * 1.6) - H * .3; c.fillStyle = `rgba(255,255,255,${.25 + s.d})`; c.fillRect(s.x, y, s.s, s.s); }
+  c.save(); c.translate(0, -S.cam);
+  for (const d of S.dust) if (!d.got) { const p = 3 + Math.sin(t * 5 + d.x) * 1.2; c.fillStyle = 'rgba(255,232,155,.25)'; c.beginPath(); c.arc(d.x, d.y, p * 3, 0, 6.283); c.fill(); c.fillStyle = '#ffe89b'; c.beginPath(); c.arc(d.x, d.y, p, 0, 6.283); c.fill(); }
+  for (const pl of S.planets) {
+    c.strokeStyle = pl.goal ? 'rgba(255,214,107,.45)' : 'rgba(255,255,255,.12)'; c.lineWidth = 1.5; c.setLineDash([4, 8]);
+    c.beginPath(); c.arc(pl.x, pl.y, pl.orb, 0, 6.283); c.stroke(); c.setLineDash([]);
+    if (pl.goal) { c.fillStyle = 'rgba(255,214,107,.15)'; c.beginPath(); c.arc(pl.x, pl.y, pl.r * 2.2 + Math.sin(t * 3) * 4, 0, 6.283); c.fill(); }
+    const g = c.createRadialGradient(pl.x - pl.r * .4, pl.y - pl.r * .4, pl.r * .1, pl.x, pl.y, pl.r);
+    g.addColorStop(0, pl.goal ? '#fff2c2' : `hsl(${pl.hue},70%,72%)`); g.addColorStop(1, pl.goal ? '#e0a020' : `hsl(${pl.hue},55%,42%)`);
+    c.fillStyle = g; c.beginPath(); c.arc(pl.x, pl.y, pl.r, 0, 6.283); c.fill();
+    if (pl.amp) { c.strokeStyle = 'rgba(255,255,255,.08)'; c.beginPath(); c.moveTo(pl.bx - pl.amp, pl.y); c.lineTo(pl.bx + pl.amp, pl.y); c.stroke(); }
+  }
+  for (const k of S.rocks) {
+    c.save(); c.translate(k.x, k.y); c.rotate(k.rot); c.fillStyle = '#6a6577'; c.beginPath();
+    for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283, rr = k.r * (.75 + ((i * 37) % 10) / 30); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    c.closePath(); c.fill(); c.restore();
+  }
+  c.lineCap = 'round';
+  for (let i = 1; i < S.trail.length; i++) { c.strokeStyle = `rgba(160,150,255,${i / S.trail.length * .6})`; c.lineWidth = i / S.trail.length * 6; c.beginPath(); c.moveTo(...S.trail[i - 1]); c.lineTo(...S.trail[i]); c.stroke(); }
+  if (S.mode === 'orbit' && G.playing) {
+    const tx = -Math.sin(S.ang) * S.dir, ty = Math.cos(S.ang) * S.dir;
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 2; c.setLineDash([3, 7]);
+    c.beginPath(); c.moveTo(S.p.x, S.p.y); c.lineTo(S.p.x + tx * 120, S.p.y + ty * 120); c.stroke(); c.setLineDash([]);
+  }
+  c.fillStyle = 'rgba(180,170,255,.3)'; c.beginPath(); c.arc(S.p.x, S.p.y, 14, 0, 6.283); c.fill();
+  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(S.p.x, S.p.y, 7, 0, 6.283); c.fill();
+  P.draw(c);
+  c.restore();
+}
+</script></body></html>

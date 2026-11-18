@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gancho Minero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/style.css"></head>
+<body><div id="app"></div>
+<script src="../shared/audio.js"></script><script src="../shared/engine.js"></script>
+<script>
+'use strict';
+const W = 960, H = 600, OX = 480, OY = 92, NL = 10, TIME = 60;
+const P = new Engine.Particles();
+let S = null, whir = null;
+const later = (fn, ms) => { const my = S; setTimeout(() => { if (S === my) fn(); }, ms); };
+const KIND = {
+  gold1: { r: 14, val: 60, w: .35, col: '#f2c14e' }, gold2: { r: 24, val: 160, w: 1.1, col: '#f2c14e' }, gold3: { r: 40, val: 420, w: 3.2, col: '#f2c14e' },
+  gem: { r: 9, val: 600, w: .1, col: '#5fd4e8' }, rock1: { r: 19, val: 15, w: 1.7, col: '#8f8780' }, rock2: { r: 33, val: 30, w: 4.2, col: '#8f8780' },
+  bag: { r: 16, val: 0, w: .4, col: '#c79a6b' }, mole: { r: 13, val: 10, w: .3, col: '#7a5b45' }
+};
+const G = Engine.create({
+  id: 'gancho', title: 'Gancho Minero', genre: 'Reflejos · tiempo', accent: '#d9a02b', bg: '#f3ecdf',
+  glyph: '<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M32 6v30"/><path d="M24 42a8 8 0 1 0 16 0"/><path d="M24 42l-4-6M40 42l4-6"/><circle cx="46" cy="54" r="5" fill="currentColor"/></svg>',
+  tagline: 'Lanza la garra en el ángulo justo y saca oro, gemas y sacos sorpresa antes de que acabe el tiempo.',
+  help: ['<b>Clic, toque, Espacio o ↓</b> lanza la garra', 'Los objetos pesados suben más lento: elige bien', '<b>↑</b> usa dinamita para soltar una roca pesada', 'Consigue el dinero objetivo en 60 segundos'],
+  levels: NL, maxScale: 1.3,
+  song: { bpm: 106, root: 55, scale: 'mixo', prog: [0, 3, 0, 4], padInst: 'padSoft', arpInst: 'banjo', arp: 'x.xx.xx.x.xx.xx.', arpOct: 4, leadInst: 'flute', leadOct: 5, leadDensity: .4,
+    kick: 'x.......x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', shaker: true, bass: 'x...5...x...5...', bassInst: 'bassPluck', bassLen: 3, seed: 41 },
+  intensity: () => 1,
+  onLevel: load,
+  onPause(p) { if (whir && p) whir.set({ vol: 0 }); },
+  onReady(g) {
+    g.canvas(W, H); g.loop(update, render);
+    g.cv.addEventListener('pointerdown', fire);
+    addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'ArrowDown') fire(); if (e.code === 'ArrowUp') dynamite(); });
+  }
+});
+function load(n) {
+  const r = Engine.rng(n * 6151 + 9), target = 550 + n * 430;
+  const items = [];
+  const place = (k, minY = 230) => {
+    const K = KIND[k];
+    for (let t = 0; t < 60; t++) {
+      const x = 60 + r() * (W - 120), y = minY + r() * (H - minY - 40);
+      if (items.every(o => Math.hypot(o.x - x, o.y - y) > o.r + K.r + 12)) { items.push({ k, x, y, r: K.r, val: K.val, w: K.w, col: K.col, vx: k === 'mole' ? (40 + r() * 40) * (r() < .5 ? -1 : 1) : 0, carry: k === 'mole' && r() < .5 }); return; }
+    }
+  };
+  let budget = 0;
+  const add = (k, c, y) => { for (let i = 0; i < c; i++) { place(k, y); budget += KIND[k].val; } };
+  add('gold3', 1 + (n > 5 ? 1 : 0), 380); add('gem', Math.floor(n / 2), 420); add('rock2', 2 + Math.floor(n / 3)); add('rock1', 3 + Math.floor(n / 2));
+  if (n >= 3) add('mole', Math.floor(n / 2), 300);
+  add('bag', 2);
+  while (budget < target * 1.7) { const k = r() < .55 ? 'gold1' : 'gold2'; add(k, 1); }
+  S = { n, target, items, money: 0, time: TIME, ang: 0, t: 0, hook: { state: 'swing', len: 0, item: null }, dyn: n >= 2 ? 3 : 0, boost: 1, over: false, flash: 0 };
+  if (whir) whir.stop();
+  whir = G.A.loop({ type: 'triangle', f: 90, filter: 600 });
+  P.clear(); hud();
+}
+function hud() { G.hud({ Nivel: `${S.n}/${NL}`, Dinero: '$' + S.money, Objetivo: '$' + S.target, Tiempo: Math.ceil(S.time) + ' s', Dinamita: S.dyn }); }
+function fire() {
+  if (!S || !G.playing || G.paused || S.hook.state !== 'swing') return;
+  S.hook.state = 'out'; G.sfx('swish', { pitch: .8, pan: G.pan(hookPos()[0]) });
+}
+function dynamite() {
+  const hk = S && S.hook;
+  if (!hk || hk.state !== 'in' || !hk.item || S.dyn <= 0 || G.paused) return;
+  S.dyn--; const [x, y] = hookPos();
+  G.sfx('boom', { pan: G.pan(x) }); P.burst(x, y, 30, { color: ['#ffb347', '#ff6b4a', '#555'], speed: 260 });
+  hk.item = null; hud();
+}
+function hookPos() { return [OX + Math.sin(S.ang) * (40 + S.hook.len), OY + Math.cos(S.ang) * (40 + S.hook.len)]; }
+function update(dt) {
+  S.t += dt; S.flash = Math.max(0, S.flash - dt);
+  const prev = Math.ceil(S.time); S.time -= dt;
+  if (Math.ceil(S.time) !== prev) { hud(); if (S.time < 10 && S.time > 0) G.sfx('tick', { pitch: 1.4 }); }
+  G.music.setIntensity(S.time < 15 ? 2 : 1);
+  const hk = S.hook;
+  for (const o of S.items) if (o.k === 'mole' && o !== hk.item) { o.x += o.vx * dt; if (o.x < 40 || o.x > W - 40) o.vx *= -1; }
+  if (hk.state === 'swing') { S.ang = Math.sin(S.t * 1.7) * 1.25; whir.set({ vol: 0 }); }
+  else if (hk.state === 'out') {
+    hk.len += 560 * dt;
+    const [x, y] = hookPos();
+    whir.set({ vol: .05, f: 140, filter: 900 });
+    for (const o of S.items) if (Math.hypot(o.x - x, o.y - y) < o.r + 8) {
+      hk.item = o; S.items = S.items.filter(i => i !== o); hk.state = 'in';
+      G.sfx(o.k.startsWith('rock') ? 'thud' : o.k === 'gem' ? 'chime' : 'clack', { pan: G.pan(x) }); break;
+    }
+    if (hk.state === 'out' && (x < 0 || x > W || y > H)) { hk.state = 'in'; G.sfx('clack', { pitch: .6, pan: G.pan(x) }); }
+  } else if (hk.state === 'in') {
+    const w = hk.item ? hk.item.w : 0, sp = 620 * S.boost / (1 + w);
+    hk.len -= sp * dt;
+    whir.set({ vol: .07, f: 60 + sp * .15, filter: 400 + sp });
+    if (hk.item) { const [x, y] = hookPos(); hk.item.x = x; hk.item.y = y + hk.item.r * .6; }
+    if (hk.len <= 0) {
+      hk.len = 0; hk.state = 'swing';
+      if (hk.item) collect(hk.item);
+      hk.item = null;
+    }
+  }
+  if (S.time <= 0 && !S.over && hk.state === 'swing') end();
+  else if (S.time <= -8 && !S.over) end();
+  P.update(dt);
+}
+function collect(o) {
+  let v = o.val, label;
+  if (o.k === 'bag') {
+    const r = Math.random();
+    if (r < .2 && S.n >= 2) { S.dyn++; label = '+1 dinamita'; v = 0; }
+    else if (r < .35) { S.boost = 1.5; label = '¡Fuerza extra!'; v = 0; }
+    else v = 50 + Math.floor(Math.random() * 10) * 50;
+  }
+  if (o.k === 'mole' && o.carry) v = 650;
+  S.money += v;
+  if (v > 0) { G.sfx(v >= 300 ? 'cash' : 'coin', { pan: G.pan(OX) }); label = label || '+$' + v; S.flash = v >= 300 ? .3 : 0; }
+  else G.sfx('pickup');
+  P.text(OX, OY - 10, label, { color: v >= 300 ? '#d9a02b' : '#3a2e22', size: 24 });
+  hud();
+}
+function end() {
+  S.over = true; whir.set({ vol: 0 });
+  if (S.money >= S.target) {
+    const k = S.money / S.target;
+    G.win(k >= 1.5 ? 3 : k >= 1.25 ? 2 : 1, [['Dinero', '$' + S.money], ['Objetivo', '$' + S.target], ['Dinamita restante', S.dyn]], S.money);
+  } else G.lose('No alcanzó el dinero', [['Dinero', '$' + S.money], ['Objetivo', '$' + S.target]]);
+}
+function render() {
+  const c = G.ctx; if (!c || !S) return;
+  const t = performance.now() / 1000;
+  c.fillStyle = '#f3ecdf'; c.fillRect(0, 0, W, 150);
+  const layers = ['#c9a37a', '#b88f66', '#a57d57', '#916b4a', '#7d5c40'];
+  layers.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, 150 + i * 92, W, 92); });
+  c.fillStyle = '#6e8a4e'; c.fillRect(0, 140, W, 12);
+  for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(0,0,0,.06)'; c.beginPath(); c.arc((i * 211) % W, 170 + (i * 137) % 420, 3 + i % 4, 0, 6.283); c.fill(); }
+  c.fillStyle = '#3a2e22'; c.beginPath(); c.roundRect(OX - 36, OY - 62, 72, 44, 10); c.fill();
+  c.fillStyle = '#f3ecdf'; c.beginPath(); c.arc(OX, OY - 40, 8, 0, 6.283); c.fill();
+  c.fillStyle = '#d9a02b'; c.fillRect(OX - 4, OY - 18, 8, 18);
+  for (const o of S.items) drawItem(c, o, t);
+  const [hx, hy] = hookPos();
+  c.strokeStyle = '#3a2e22'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(OX, OY); c.lineTo(hx, hy); c.stroke();
+  if (S.hook.item) drawItem(c, S.hook.item, t);
+  c.save(); c.translate(hx, hy); c.rotate(-S.ang);
+  const open = S.hook.item ? .25 : .6;
+  c.strokeStyle = '#3a2e22'; c.lineWidth = 4; c.lineCap = 'round';
+  for (const s of [-1, 1]) { c.beginPath(); c.moveTo(0, 0); c.lineTo(s * 12 * open * 1.6, 10); c.lineTo(s * 6, 20); c.stroke(); }
+  c.fillStyle = '#3a2e22'; c.beginPath(); c.arc(0, 0, 5, 0, 6.283); c.fill();
+  c.restore();
+  if (S.hook.state === 'swing' && G.playing) {
+    c.strokeStyle = 'rgba(58,46,34,.18)'; c.setLineDash([4, 8]); c.beginPath(); c.moveTo(hx, hy); c.lineTo(OX + Math.sin(S.ang) * 900, OY + Math.cos(S.ang) * 900); c.stroke(); c.setLineDash([]);
+  }
+  const k = Math.min(1, S.money / S.target);
+  c.fillStyle = 'rgba(58,46,34,.12)'; c.fillRect(24, 24, 260, 8); c.fillStyle = k >= 1 ? '#5b9e4d' : '#d9a02b'; c.fillRect(24, 24, 260 * k, 8);
+  if (S.time < 10 && S.time > 0) { c.fillStyle = `rgba(217,75,75,${.6 + Math.sin(t * 10) * .3})`; c.font = '700 40px Inter, sans-serif'; c.textAlign = 'right'; c.fillText(Math.ceil(S.time), W - 30, 64); }
+  P.draw(c);
+  if (S.flash) { c.fillStyle = `rgba(255,230,150,${S.flash})`; c.fillRect(0, 0, W, H); }
+}
+function drawItem(c, o, t) {
+  c.save(); c.translate(o.x, o.y);
+  if (o.k.startsWith('gold')) {
+    c.fillStyle = '#c99a2e'; c.beginPath();
+    for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, rr = o.r * (.85 + ((i * 7) % 5) / 25); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr + 2); } c.fill();
+    c.fillStyle = o.col; c.beginPath();
+    for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, rr = o.r * (.85 + ((i * 7) % 5) / 25); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.fill();
+    c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.arc(-o.r * .3, -o.r * .35, o.r * .22, 0, 6.283); c.fill();
+  } else if (o.k === 'gem') {
+    c.rotate(Math.sin(t * 2 + o.x) * .2);
+    c.fillStyle = o.col; c.beginPath(); c.moveTo(0, -o.r * 1.4); c.lineTo(o.r, 0); c.lineTo(0, o.r * 1.4); c.lineTo(-o.r, 0); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.moveTo(0, -o.r * 1.4); c.lineTo(o.r * .4, 0); c.lineTo(-o.r * .3, 0); c.fill();
+  } else if (o.k.startsWith('rock')) {
+    c.fillStyle = '#6d665f'; c.beginPath(); for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283, rr = o.r * (.8 + ((i * 3) % 4) / 15); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr + 2); } c.fill();
+    c.fillStyle = o.col; c.beginPath(); for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283, rr = o.r * (.8 + ((i * 3) % 4) / 15); c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.fill();
+  } else if (o.k === 'bag') {
+    c.fillStyle = o.col; c.beginPath(); c.ellipse(0, 4, o.r, o.r * .85, 0, 0, 6.283); c.fill();
+    c.fillStyle = '#8a6440'; c.fillRect(-5, -o.r * .8, 10, 6);
+    c.fillStyle = '#3a2e22'; c.font = '700 14px Inter, sans-serif'; c.textAlign = 'center'; c.fillText('?', 0, 9);
+  } else {
+    c.scale(o.vx > 0 ? 1 : -1, 1);
+    c.fillStyle = o.col; c.beginPath(); c.ellipse(0, 0, o.r * 1.3, o.r, 0, 0, 6.283); c.fill();
+    c.fillStyle = '#f0c9b0'; c.beginPath(); c.arc(o.r * 1.1, -2, 4, 0, 6.283); c.fill();
+    c.fillStyle = '#111'; c.beginPath(); c.arc(o.r * .6, -4, 2, 0, 6.283); c.fill();
+    if (o.carry) { c.fillStyle = '#5fd4e8'; c.beginPath(); c.moveTo(-4, -o.r - 10); c.lineTo(2, -o.r - 4); c.lineTo(-4, -o.r + 2); c.lineTo(-10, -o.r - 4); c.fill(); }
+  }
+  c.restore();
+}
+</script></body></html>

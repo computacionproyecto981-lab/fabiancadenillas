@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Espacio del Gamer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f3ef;--ink:#141414;--muted:#8a877f;--line:rgba(0,0,0,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#111113;--ink:#f1f1f1;--muted:#7d7d85;--line:rgba(255,255,255,.08)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:72px 28px 56px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:56px}
+h1{font-size:clamp(40px,7vw,84px);font-weight:300;letter-spacing:-.05em;margin:0;line-height:.95}
+.sub{color:var(--muted);margin:14px 0 0;font-size:15px}
+.total{text-align:right;font-size:13px;color:var(--muted);line-height:1.6}
+.total b{display:block;font-size:28px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line)}
+a.g{position:relative;display:flex;flex-direction:column;gap:18px;padding:26px 24px 22px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-decoration:none;color:inherit;transition:background .2s;min-height:220px}
+a.g:hover{background:var(--ink);color:var(--bg)}
+a.g:hover .glyph{color:var(--c)}
+a.g:hover .meta,a.g:hover .num{color:inherit;opacity:.6}
+.num{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:1px}
+.glyph{width:44px;height:44px;color:var(--ink);transition:color .2s}
+.glyph svg{width:100%;height:100%}
+.name{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-top:auto}
+.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.dots{letter-spacing:2px}
+.dot{position:absolute;top:28px;right:24px;width:8px;height:8px;border-radius:50%;background:var(--c)}
+footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;font-size:13px;color:var(--muted)}
+footer button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+@media (max-width:560px){.wrap{padding:44px 16px 40px}.total{text-align:left}a.g{min-height:180px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Espacio del Gamer</h1><p class="sub">Doce juegos. Doce mecánicas. Cada uno con su música.</p></div>
+    <div class="total"><b id="stars">0</b>estrellas de <span id="max">0</span></div>
+  </header>
+  <main class="grid" id="grid"></main>
+  <footer><span>Usa auriculares para la mejor experiencia sonora.</span><button id="reset">Borrar progreso</button></footer>
+</div>
+<script>
+'use strict';
+const S = 'fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"';
+const GAMES = [
+  ['orbita', 'Órbita', 'Un botón', 10, '#8b7bff', `<svg viewBox="0 0 64 64" ${S}><circle cx="32" cy="32" r="10"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(-25 32 32)"/><circle cx="54" cy="22" r="3" fill="currentColor"/></svg>`],
+  ['torre', 'Torre', 'Precisión', 10, '#ff7a59', `<svg viewBox="0 0 64 64" ${S}><rect x="14" y="44" width="36" height="10" rx="2"/><rect x="18" y="32" width="30" height="10" rx="2"/><rect x="22" y="20" width="22" height="10" rx="2"/><rect x="30" y="8" width="18" height="10" rx="2"/></svg>`],
+  ['laberinto', 'Laberinto Giratorio', 'Gravedad', 10, '#2f9e8f', `<svg viewBox="0 0 64 64" ${S}><g transform="rotate(15 32 32)"><rect x="10" y="10" width="44" height="44" rx="4"/><path d="M10 24h20M44 10v22M24 54V38h16M54 44H44"/></g><circle cx="27" cy="30" r="4" fill="currentColor"/></svg>`],
+  ['gancho', 'Gancho Minero', 'Reflejos', 10, '#d9a02b', `<svg viewBox="0 0 64 64" ${S}><path d="M32 6v30"/><path d="M24 42a8 8 0 1 0 16 0"/><path d="M24 42l-4-6M40 42l4-6"/><circle cx="46" cy="54" r="5" fill="currentColor"/></svg>`],
+  ['desatasco', 'Desatasco', 'Lógica', 10, '#e05a47', `<svg viewBox="0 0 64 64" ${S}><rect x="8" y="8" width="48" height="48" rx="5"/><rect x="14" y="26" width="22" height="10" rx="3" fill="currentColor"/><rect x="40" y="14" width="10" height="22" rx="3"/><rect x="14" y="42" width="30" height="8" rx="3"/><path d="M56 31h6"/></svg>`],
+  ['carril', 'Carril Neón', 'Corredor', 10, '#ff3d9a', `<svg viewBox="0 0 64 64" ${S}><path d="M28 10 8 56M36 10l20 46M32 18v6M32 32v8M32 48v8"/><circle cx="44" cy="44" r="5" fill="currentColor"/></svg>`],
+  ['hockey', 'Hockey de Aire', 'Duelo', 8, '#2f6df6', `<svg viewBox="0 0 64 64" ${S}><rect x="10" y="6" width="44" height="52" rx="10"/><path d="M10 32h44M24 6h16M24 58h16"/><circle cx="32" cy="32" r="6" fill="currentColor"/></svg>`],
+  ['artilleria', 'Artillería', 'Por turnos', 8, '#5b7a3a', `<svg viewBox="0 0 64 64" ${S}><path d="M6 52c10-10 18-6 26-10s16-12 26-8"/><rect x="12" y="38" width="16" height="8" rx="2" fill="currentColor"/><path d="M22 38l10-10"/><path d="M36 22c6-8 14-8 18 2" stroke-dasharray="3 5"/></svg>`],
+  ['pixelgrama', 'Pixelgrama', 'Deducción', 10, '#8a877f', `<svg viewBox="0 0 64 64" ${S}><rect x="18" y="18" width="40" height="40" rx="3"/><path d="M18 31h40M18 45h40M31 18v40M45 18v40"/><rect x="31" y="31" width="14" height="14" fill="currentColor"/><path d="M6 24h6M6 38h6M24 6v6M38 6v6"/></svg>`],
+  ['liana', 'Liana', 'Física', 10, '#e8862d', `<svg viewBox="0 0 64 64" ${S}><circle cx="14" cy="8" r="3" fill="currentColor"/><circle cx="50" cy="8" r="3" fill="currentColor"/><path d="M14 8c6 14 12 18 18 22M50 8c-4 12-10 18-18 22"/><circle cx="32" cy="36" r="9" fill="currentColor"/><path d="M18 52h28l-4 8H22z"/></svg>`],
+  ['corte', 'Corte Cósmico', 'Deslizar', 10, '#7c5cff', `<svg viewBox="0 0 64 64" ${S}><path d="M22 10l12 8-4 16-14-2-4-14z"/><path d="M38 34l14 2 2 14-12 6-8-10z"/><path d="M6 58 58 6" stroke-dasharray="2 6"/></svg>`],
+  ['derrape', 'Derrape', 'Carreras', 8, '#e5484d', `<svg viewBox="0 0 64 64" ${S}><path d="M10 46c0-20 12-30 26-30s18 10 18 18-6 14-14 14H22"/><rect x="26" y="38" width="16" height="9" rx="3" fill="currentColor" transform="rotate(-20 34 42)"/><path d="M8 52h8M14 58h10" stroke-dasharray="2 4"/></svg>`]
+];
+const read = () => { try { return JSON.parse(localStorage.getItem('doce.progress.v1')) || {}; } catch (e) { return {}; } };
+function render() {
+  const p = read(); let tot = 0, max = 0;
+  const grid = document.getElementById('grid'); grid.innerHTML = '';
+  GAMES.forEach(([id, name, genre, lv, col, svg], i) => {
+    const st = Object.values((p[id] || {}).stars || {}).reduce((a, b) => a + b, 0);
+    const done = Math.min(lv, ((p[id] || {}).unlocked || 1) - 1);
+    tot += st; max += lv * 3;
+    const a = document.createElement('a'); a.className = 'g'; a.href = `games/${id}.html`; a.style.setProperty('--c', col);
+    a.innerHTML = `<span class="num">${String(i + 1).padStart(2, '0')}</span>${done ? '<span class="dot"></span>' : ''}<div class="glyph">${svg}</div>
+      <div class="name">${name}</div><div class="meta"><span>${genre}</span><span class="dots">${done}/${lv} · ★${st}</span></div>`;
+    grid.append(a);
+  });
+  document.getElementById('stars').textContent = tot; document.getElementById('max').textContent = max;
+}
+document.getElementById('reset').onclick = () => { if (confirm('¿Borrar todo el progreso?')) { try { localStorage.removeItem('doce.progress.v1'); } catch (e) { } render(); } };
+addEventListener('pageshow', render); render();
+</script>
+</body>
+</html>
