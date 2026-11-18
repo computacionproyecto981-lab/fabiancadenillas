@@ -132,7 +132,7 @@
           eyebrow(cfg.genre, `${cfg.levels} niveles`),
           h('h1', { class: 'mega' }, cfg.title),
           h('p', { class: 'tag' }, cfg.tagline || '')),
-        h('div', { class: 'side' }, h('p', { class: 'label' }, 'Cómo se juega'), steps()),
+        h('div', { class: 'side' }, steps()),
         h('footer', { class: 'foot' },
           ...bigBtn(PLAY, 'Jugar', `${tot} de ${max} estrellas`, () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); }),
           h('div', { class: 'meter' }, h('i', { style: `width:${tot / max * 100}%` })))
