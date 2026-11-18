@@ -121,7 +121,7 @@
     const figures = s => h('div', { class: 'figures' }, ...(s || []).map(([k, v]) => h('div', {}, h('b', {}, String(v)), h('span', {}, k))));
     const eyebrow = (...parts) => h('p', { class: 'eyebrow' }, parts.filter(Boolean).join('  /  '));
     const btn = (label, fn, kind) => h('button', { class: 'pill ' + (kind || ''), onclick: fn }, label);
-    const bigBtn = (icon, title, sub, fn) => [h('button', { class: 'play', title, html: icon, onclick: fn }), h('div', { class: 'playtxt' }, h('b', {}, title), h('span', {}, sub))];
+    const bigBtn = (icon, title, sub, fn) => [h('button', { class: 'play', title, html: icon, onclick: fn }), h('div', { class: 'playtxt' }, h('b', {}, title), sub ? h('span', {}, sub) : null)];
     const startMusic = () => { if (cfg.song) A.Music.play(cfg.song, cfg.intensity ? cfg.intensity(G.level) : 1); };
 
     function showTitle() {
@@ -134,7 +134,7 @@
           h('p', { class: 'tag' }, cfg.tagline || '')),
         h('div', { class: 'side' }, steps()),
         h('footer', { class: 'foot' },
-          ...bigBtn(PLAY, 'Jugar', `${tot} de ${max} estrellas`, () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); }),
+          ...bigBtn(PLAY, 'Jugar', null, () => { A.init(); A.play('select'); startMusicMenu(); showLevels(); }),
           h('div', { class: 'meter' }, h('i', { style: `width:${tot / max * 100}%` })))
       ], 'title');
     }
