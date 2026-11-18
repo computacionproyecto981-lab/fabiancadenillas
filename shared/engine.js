@@ -95,16 +95,16 @@
     G.toggleSfx = () => sBtn.onclick();
     const top = h('header', { class: 'top' },
       h('a', { class: 'home', href: '../index.html', title: 'Volver al menú' }, '←'),
-      h('div', { class: 'name' }, h('i', {}), cfg.title),
-      hud,
-      h('div', { class: 'tools' },
-        h('button', { class: 'ib', title: 'Pausa (Esc)', html: I.pause, onclick: () => pause() }),
-        h('button', { class: 'ib', title: 'Reiniciar', html: I.restart, onclick: () => restart() }),
-        h('button', { class: 'ib', title: 'Niveles', html: I.grid, onclick: () => { A.play('click'); showLevels(); } })));
+      h('div', { class: 'name' }, h('i', {}), cfg.title));
+    /* barra inferior flotante: marcador + acciones */
+    const act = (icon, label, fn) => h('button', { class: 'hb', 'aria-label': label, html: I[icon] }, h('span', { class: 'tip' }, label));
+    const pBtn = act('pause', 'Pausa · Esc'), rBtn = act('restart', 'Reiniciar · R'), lBtn = act('grid', 'Niveles');
+    pBtn.onclick = () => pause(); rBtn.onclick = () => restart(); lBtn.onclick = () => { A.play('click'); showLevels(); };
+    const bar = h('nav', { class: 'hudbar', 'aria-label': 'Marcador' }, hud, h('div', { class: 'acts' }, pBtn, rBtn, lBtn));
     const stage = h('main', { class: 'stage' });
     const ov = h('div', { class: 'overlay' }, h('div', { class: 'loading' }, '·  ·  ·'));
     const toastEl = h('div', { class: 'toast' });
-    app.append(top, stage, ov, toastEl, dock);
+    app.append(top, stage, ov, toastEl, bar, dock);
     G.stage = stage;
 
     function setPaused(p) { if (G.paused === p) return; G.paused = p; A.Music.duck(p); cfg.onPause && cfg.onPause(p, G); }
@@ -115,9 +115,9 @@
     function showPanel(children, cls) {
       ov.innerHTML = '';
       ov.append(h('section', { class: 'sheet ' + (cls || '') }, h('div', { class: 'deco', html: cfg.glyph || '' }), ...children));
-      ov.classList.remove('hidden'); setPaused(true);
+      ov.classList.remove('hidden'); document.body.classList.add('panel-open'); setPaused(true);
     }
-    function hidePanel() { ov.classList.add('hidden'); setPaused(false); }
+    function hidePanel() { ov.classList.add('hidden'); document.body.classList.remove('panel-open'); setPaused(false); }
     const panelOpen = () => !ov.classList.contains('hidden');
     const steps = () => h('ol', { class: 'steps' }, ...(cfg.help || []).map((t, i) => h('li', {}, h('span', { class: 'n' }, String(i + 1).padStart(2, '0')), h('p', { html: t }))));
     const figures = s => h('div', { class: 'figures' }, ...(s || []).map(([k, v]) => h('div', {}, h('b', {}, String(v)), h('span', {}, k))));
@@ -209,8 +209,8 @@
     };
     G.hud = function (obj) {
       const keys = Object.keys(obj), sig = keys.join('|');
-      if (hud._keys !== sig) { hud.innerHTML = ''; hud._els = {}; keys.forEach(k => { const b = h('b'); hud.append(h('div', { class: 'stat' }, h('span', {}, k), b)); hud._els[k] = b; }); hud._keys = sig; }
-      keys.forEach(k => { const v = String(obj[k]); if (hud._els[k].textContent !== v) hud._els[k].textContent = v; });
+      if (hud._keys !== sig) { hud.innerHTML = ''; hud._els = {}; keys.forEach(k => { const b = h('b'); hud.append(h('div', { class: 'stat' }, h('span', {}, k), b)); hud._els[k] = b; }); hud._keys = sig; hud._init = true; }
+      keys.forEach(k => { const v = String(obj[k]), el = hud._els[k]; if (el.textContent !== v) { const first = el.textContent === ''; el.textContent = v; if (!first) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); } } });
     };
     let tt;
     G.toast = (msg, ms = 1500) => { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('show'), ms); };
@@ -223,7 +223,8 @@
     };
     function fit() {
       const cv = G.cv; if (!cv) return;
-      const r = stage.getBoundingClientRect(); let other = 0;
+      const r0 = stage.getBoundingClientRect(), cs = getComputedStyle(stage);
+      const r = { width: r0.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) + 24, height: r0.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) + 24 }; let other = 0;
       for (const ch of stage.children) if (ch !== cv && ch.offsetParent !== null && getComputedStyle(ch).position !== 'absolute') other += ch.offsetHeight + 12;
       const s = Math.max(.1, Math.min((r.width - 24) / cv.width, (r.height - 24 - other) / cv.height, cfg.maxScale || 1.5));
       cv.style.width = Math.floor(cv.width * s) + 'px'; cv.style.height = Math.floor(cv.height * s) + 'px'; G.scale = s;
@@ -254,7 +255,7 @@
         el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointerleave', off); el.addEventListener('pointercancel', off);
         return el;
       }));
-      document.body.append(h('div', { class: 'touch' }, mk(left || []), mk(right || [])));
+      document.body.append(h('div', { class: 'touch' }, mk(left || []), mk(right || []))); document.body.classList.add('has-touch');
     };
     G.swipe = function (el, cb) {
       let sx, sy, id = null;
