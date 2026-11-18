@@ -78,9 +78,21 @@
     if (cfg.dark) document.body.classList.add('dark');
     const app = document.getElementById('app');
     const hud = h('div', { class: 'hud' });
-    const tg = (icon, on, title, fn) => { const b = h('button', { class: 'ib' + (on ? '' : ' off'), title, html: I[icon], onclick: () => { A.init(); fn(b); } }); return b; };
-    const mBtn = tg('music', A.musicOn, 'Música', b => { A.setMusic(!A.musicOn); b.classList.toggle('off', !A.musicOn); });
-    const sBtn = tg('sound', A.sfxOn, 'Efectos', b => { A.setSfx(!A.sfxOn); b.classList.toggle('off', !A.sfxOn); A.play('click'); });
+    /* control de audio flotante: barra vertical en el borde izquierdo, visible también sobre las pantallas */
+    const EQ = '<span class="eq"><i></i><i></i><i></i><i></i></span>';
+    const WAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z" fill="currentColor"/><path class="w1" d="M15.5 9a4 4 0 0 1 0 6"/><path class="w2" d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>';
+    const audioBtn = (kind, html, label, key, isOn, toggle) => {
+      const b = h('button', { class: 'ab ' + kind, 'aria-label': label, html: html + '<span class="slash"></span>' },
+        h('span', { class: 'tip' }, h('b', {}, label), h('em', {}), h('kbd', {}, key)));
+      const sync = () => { const on = isOn(); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', on); b.querySelector('em').textContent = on ? 'Activada' : 'Apagada'; };
+      b.onclick = () => { A.init(); toggle(); sync(); G.toast(`${label}: ${isOn() ? 'activada' : 'apagada'}`, 900); };
+      b.sync = sync; sync(); return b;
+    };
+    const mBtn = audioBtn('music', EQ, 'Música', 'M', () => A.musicOn, () => A.setMusic(!A.musicOn));
+    const sBtn = audioBtn('sfx', WAVE, 'Efectos', 'N', () => A.sfxOn, () => { A.setSfx(!A.sfxOn); A.play('click'); });
+    const dock = h('aside', { class: 'adock', 'aria-label': 'Audio' }, mBtn, sBtn);
+    G.toggleMusic = () => mBtn.onclick();
+    G.toggleSfx = () => sBtn.onclick();
     const top = h('header', { class: 'top' },
       h('a', { class: 'home', href: '../index.html', title: 'Volver al menú' }, '←'),
       h('div', { class: 'name' }, h('i', {}), cfg.title),
@@ -88,12 +100,11 @@
       h('div', { class: 'tools' },
         h('button', { class: 'ib', title: 'Pausa (Esc)', html: I.pause, onclick: () => pause() }),
         h('button', { class: 'ib', title: 'Reiniciar', html: I.restart, onclick: () => restart() }),
-        h('button', { class: 'ib', title: 'Niveles', html: I.grid, onclick: () => { A.play('click'); showLevels(); } }),
-        mBtn, sBtn));
+        h('button', { class: 'ib', title: 'Niveles', html: I.grid, onclick: () => { A.play('click'); showLevels(); } })));
     const stage = h('main', { class: 'stage' });
     const ov = h('div', { class: 'overlay' }, h('div', { class: 'loading' }, '·  ·  ·'));
     const toastEl = h('div', { class: 'toast' });
-    app.append(top, stage, ov, toastEl);
+    app.append(top, stage, ov, toastEl, dock);
     G.stage = stage;
 
     function setPaused(p) { if (G.paused === p) return; G.paused = p; A.Music.duck(p); cfg.onPause && cfg.onPause(p, G); }
@@ -229,6 +240,8 @@
       if (e.key === 'Escape' || (!cfg.typing && (e.key === 'p' || e.key === 'P'))) { if (panelOpen()) { if (G.playing) hidePanel(); } else pause(); e.preventDefault(); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       if ((e.key === 'r' || e.key === 'R') && G.started && !panelOpen() && !cfg.noR) restart();
+      if (e.code === 'KeyM' && !e.repeat) G.toggleMusic();
+      if (e.code === 'KeyN' && !e.repeat) G.toggleSfx();
     });
     addEventListener('keyup', e => { G.keys[e.code] = false; });
     addEventListener('blur', () => { G.keys = {}; if (G.playing && !panelOpen()) pause(); });

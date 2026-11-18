@@ -133,3 +133,32 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
   .meter,.pills{margin-left:0}
   .deco{width:90vw;bottom:-4vh}
 }
+
+/* ============ control de audio flotante ============ */
+.adock{position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:999px;
+  background:rgba(18,18,24,.62);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 10px 30px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.08)}
+.ab{position:relative;width:46px;height:46px;border:0;border-radius:50%;cursor:pointer;display:grid;place-items:center;color:#fff;background:var(--accent);transition:background .2s,transform .15s,color .2s;padding:0}
+.ab:hover{transform:scale(1.08)}
+.ab:active{transform:scale(.94)}
+.ab svg{width:22px;height:22px}
+.ab.off{background:rgba(255,255,255,.08);color:rgba(255,255,255,.55)}
+.ab .slash{position:absolute;width:30px;height:2.5px;border-radius:2px;background:currentColor;transform:rotate(-45deg) scaleX(0);transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.ab.off .slash{transform:rotate(-45deg) scaleX(1)}
+.eq{display:flex;align-items:flex-end;gap:2.5px;height:18px}
+.eq i{width:3.5px;border-radius:2px;background:currentColor;height:40%;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.35s;animation-duration:.8s}
+.eq i:nth-child(3){animation-delay:-.6s;animation-duration:1.15s}
+.eq i:nth-child(4){animation-delay:-.15s;animation-duration:.9s}
+.ab.off .eq i{animation:none;height:22%}
+@keyframes eq{0%,100%{height:25%}50%{height:100%}}
+.ab.sfx .w1,.ab.sfx .w2{transition:opacity .2s}
+.ab.sfx.off .w1,.ab.sfx.off .w2{opacity:0}
+.ab .tip{position:absolute;left:calc(100% + 14px);top:50%;transform:translate(-6px,-50%);opacity:0;pointer-events:none;white-space:nowrap;display:flex;align-items:center;gap:8px;
+  background:rgba(18,18,24,.9);color:#fff;padding:8px 12px;border-radius:12px;font-size:13px;transition:.18s}
+.ab:hover .tip,.ab:focus-visible .tip{opacity:1;transform:translate(0,-50%)}
+.ab .tip em{font-style:normal;opacity:.65}
+.ab .tip kbd{font:600 11px Inter,system-ui,sans-serif;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.14)}
+.ab:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (pointer:coarse){.ab .tip{display:none}}
+@media (max-width:640px){.adock{left:auto;right:10px;top:10px;transform:none;flex-direction:row;padding:4px;gap:4px}.ab{width:38px;height:38px}.ab svg{width:19px;height:19px}.eq{height:15px}}
+@media (min-width:641px){.sheet{padding-left:max(104px,5vw)}}
