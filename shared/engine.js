@@ -202,7 +202,6 @@
       G.playing = false; A.Music.stop(true); A.play('lose');
       showPanel([
         h('header', { class: 'head' }, eyebrow(cfg.title, `nivel ${G.level}`, 'inténtalo otra vez'), h('h1', { class: 'mega' }, msg || 'Casi')),
-        h('div', { class: 'side' }, figures(stats)),
         h('footer', { class: 'foot' },
           ...bigBtn(RETRY, 'Reintentar', `nivel ${G.level}`, () => start(G.level)),
           h('div', { class: 'pills' }, btn('Niveles', () => { startMusicMenu(); showLevels(); }, 'ghost')))
