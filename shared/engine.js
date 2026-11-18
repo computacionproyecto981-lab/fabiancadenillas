@@ -63,7 +63,6 @@
   const I = {
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 21h5v-4.5h4.5V12h4.5V7.5h5"/><path d="M18.5 7.5V2.5"/><path d="M18.5 2.6l3.6 1.5-3.6 1.5z" fill="currentColor"/></svg>',
     restart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 3.8v4.6h4.6"/><path d="M10.2 9.3v5.4l4.5-2.7z" fill="currentColor"/></svg>',
-    pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.8 8.8v6.4M14.2 8.8v6.4" stroke-width="2.6"/></svg>',
     music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
     sound: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
     lock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
@@ -98,9 +97,9 @@
       h('div', { class: 'name' }, h('i', {}), cfg.title));
     /* barra inferior flotante: marcador + acciones */
     const act = (icon, label, fn) => h('button', { class: 'hb', 'aria-label': label, html: I[icon] }, h('span', { class: 'tip' }, label));
-    const pBtn = act('pause', 'Pausa · Esc'), rBtn = act('restart', 'Reiniciar · R'), lBtn = act('grid', 'Niveles');
-    pBtn.onclick = () => pause(); rBtn.onclick = () => restart(); lBtn.onclick = () => { A.play('click'); showLevels(); };
-    const bar = h('nav', { class: 'hudbar', 'aria-label': 'Marcador' }, hud, h('div', { class: 'acts' }, pBtn, rBtn, lBtn));
+    const rBtn = act('restart', 'Reiniciar · R'), lBtn = act('grid', 'Niveles');
+    rBtn.onclick = () => restart(); lBtn.onclick = () => { A.play('click'); showLevels(); };
+    const bar = h('nav', { class: 'hudbar', 'aria-label': 'Marcador' }, hud, h('div', { class: 'acts' }, rBtn, lBtn));
     const stage = h('main', { class: 'stage' });
     const ov = h('div', { class: 'overlay' }, h('div', { class: 'loading' }, '·  ·  ·'));
     const toastEl = h('div', { class: 'toast' });
@@ -108,7 +107,7 @@
     G.stage = stage;
 
     function setPaused(p) { if (G.paused === p) return; G.paused = p; A.Music.duck(p); cfg.onPause && cfg.onPause(p, G); }
-    /* ---- pantallas a sangre: inicio, niveles, pausa, victoria y derrota ---- */
+    /* ---- pantallas a sangre: inicio, niveles, victoria y derrota ---- */
     const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></svg>';
     const RETRY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4.5h4.5"/></svg>';
     const STAR = '<svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 16.83l-5.5 2.89 1.05-6.12L3.1 9.27l6.15-.9z" fill="currentColor"/></svg>';
@@ -165,17 +164,6 @@
       hidePanel();
     }
     function restart() { if (G.started) { A.play('back'); start(G.level); } }
-    function pause() {
-      if (!G.playing || panelOpen()) return;
-      A.play('click');
-      showPanel([
-        h('header', { class: 'head' }, eyebrow(cfg.title, `nivel ${G.level}`), h('h1', { class: 'mega' }, 'Pausa')),
-        h('div', { class: 'side' }, h('p', { class: 'label' }, 'Recuerda'), steps()),
-        h('footer', { class: 'foot' },
-          ...bigBtn(PLAY, 'Continuar', 'o pulsa Esc', () => { A.play('select'); hidePanel(); }),
-          h('div', { class: 'pills' }, btn('Reiniciar', () => start(G.level), 'ghost'), btn('Niveles', () => showLevels(), 'ghost')))
-      ], 'pause');
-    }
     G.win = function (stars, stats, score) {
       if (!G.playing) return;
       G.playing = false; stars = clamp(stars | 0, 1, 3);
@@ -238,14 +226,13 @@
     };
     addEventListener('keydown', e => {
       A.init(); G.keys[e.code] = true;
-      if (e.key === 'Escape' || (!cfg.typing && (e.key === 'p' || e.key === 'P'))) { if (panelOpen()) { if (G.playing) hidePanel(); } else pause(); e.preventDefault(); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       if ((e.key === 'r' || e.key === 'R') && G.started && !panelOpen() && !cfg.noR) restart();
       if (e.code === 'KeyM' && !e.repeat) G.toggleMusic();
       if (e.code === 'KeyN' && !e.repeat) G.toggleSfx();
     });
     addEventListener('keyup', e => { G.keys[e.code] = false; });
-    addEventListener('blur', () => { G.keys = {}; if (G.playing && !panelOpen()) pause(); });
+    addEventListener('blur', () => { G.keys = {}; });
     addEventListener('pointerdown', () => A.init(), { capture: true });
     G.touch = function (left, right) {
       const mk = list => h('div', { class: 'grp' }, ...list.map(b => {

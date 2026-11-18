@@ -71,13 +71,12 @@ body.dark .card{box-shadow:0 30px 80px rgba(0,0,0,.6)}
 @media (pointer:coarse){.touch{display:flex}}
 @media (max-width:640px){.hud{gap:14px}.stat b{font-size:14px}.name{font-size:13px}.levels{grid-template-columns:repeat(4,1fr)}}
 
-/* ============ pantallas a sangre (inicio, niveles, pausa, victoria, derrota) ============ */
+/* ============ pantallas a sangre (inicio, niveles, victoria, derrota) ============ */
 .overlay{position:fixed;inset:0;z-index:20;padding:0;background:none;backdrop-filter:none;display:block;transition:opacity .3s}
 .overlay .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--gamebg)}
 .sheet{--deep:color-mix(in srgb,var(--accent) 80%,#000);position:absolute;inset:0;overflow-x:hidden;overflow-y:auto;background:var(--deep);color:#fff;
   display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"head side" "foot foot";grid-template-rows:1fr auto;
   gap:clamp(24px,4vw,64px);padding:clamp(28px,5vw,72px);animation:rise .55s cubic-bezier(.2,.9,.2,1)}
-.sheet.pause{--deep:color-mix(in srgb,var(--accent) 38%,#0d0d12)}
 .sheet.lose{--deep:#1a1519}
 .sheet.lose .mega{color:color-mix(in srgb,var(--accent) 55%,#fff)}
 @keyframes rise{from{transform:translateY(28px);opacity:0}}
