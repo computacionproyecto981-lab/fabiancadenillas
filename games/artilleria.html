@@ -165,8 +165,7 @@ function update(dt) {
 }
 function render() {
   const c = G.ctx; if (!c || !S) return;
-  const sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#dfe8ee'); sky.addColorStop(1, '#f4f1e6');
-  c.fillStyle = sky; c.fillRect(0, 0, W, H);
+  c.fillStyle = '#e9ece8'; c.fillRect(0, 0, W, H);
   c.fillStyle = 'rgba(255,255,255,.7)';
   for (let i = 0; i < 4; i++) { const x = ((i * 280 + S.t * S.wind * 30) % (W + 200) + W + 200) % (W + 200) - 100; c.beginPath(); c.ellipse(x, 90 + i * 30, 70, 18, 0, 0, 6.283); c.fill(); }
   c.fillStyle = '#7d9a55'; c.beginPath(); c.moveTo(0, H);

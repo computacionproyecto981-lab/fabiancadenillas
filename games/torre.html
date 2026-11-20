@@ -108,9 +108,7 @@ function block(c, x, y, w, col, side) {
 function render() {
   const c = G.ctx; if (!c || !S) return;
   const h = S.stack.length, k = Math.min(1, h / 40);
-  const g = c.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, `hsl(${30 - k * 220},${45 - k * 20}%,${93 - k * 70}%)`); g.addColorStop(1, `hsl(30,40%,${96 - k * 50}%)`);
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.fillStyle = `hsl(${30 - k * 220},${45 - k * 20}%,${94 - k * 60}%)`; c.fillRect(0, 0, W, H);
   if (k > .5) for (let i = 0; i < 60; i++) { c.fillStyle = `rgba(255,255,255,${(k - .5) * 1.2})`; c.fillRect((i * 97) % W, (i * 151 + S.cam * .1) % H, 2, 2); }
   c.save(); c.translate(0, -S.cam);
   c.fillStyle = '#3a3330'; c.fillRect(0, blockY(0) + BH - 8, W, 400);

@@ -102,8 +102,7 @@ function render() {
   const c = G.ctx; if (!c || !S) return;
   c.save();
   if (S.shake) c.translate((Math.random() - .5) * 18 * S.shake, (Math.random() - .5) * 18 * S.shake);
-  const sky = c.createLinearGradient(0, 0, 0, HY); sky.addColorStop(0, '#120a24'); sky.addColorStop(1, '#3a1450');
-  c.fillStyle = sky; c.fillRect(-20, -20, W + 40, HY + 20);
+  c.fillStyle = '#1f0e36'; c.fillRect(-20, -20, W + 40, HY + 20);
   const sun = c.createLinearGradient(0, HY - 170, 0, HY); sun.addColorStop(0, '#ffd36b'); sun.addColorStop(1, '#ff3d9a');
   c.fillStyle = sun; c.beginPath(); c.arc(W / 2, HY, 120, Math.PI, 0); c.fill();
   c.fillStyle = '#3a1450'; for (let i = 0; i < 6; i++) c.fillRect(W / 2 - 130, HY - 12 - i * 16, 260, 3 + i * .4);
