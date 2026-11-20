@@ -69,6 +69,7 @@
   };
 
   function create(cfg) {
+    document.body.dataset.g = cfg.id;
     const G = { cfg, id: cfg.id, level: 1, paused: true, playing: false, started: false, scale: 1, keys: {}, A, music: A.Music };
     document.title = cfg.title + ' — Espacio del Gamer';
     const root = document.documentElement;
