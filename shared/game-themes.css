@@ -348,3 +348,9 @@ body[data-g="torre"] .stage{padding:16px 150px}
 body[data-g="torre"] .hb .tip{display:none}
 }
 @media (min-width:641px){body[data-g="torre"] .adock{left:auto;right:14px;top:14px;transform:none;flex-direction:row}}
+
+/* ---- Sin marcos ni sombras: ventanas emergentes, botones, paneles y HUD ---- */
+body *{border:0!important;box-shadow:none!important}
+body *,body *::before,body *::after{outline:0!important}
+body *::before,body *::after{box-shadow:none!important}
+body .sheet,body .ib:hover,body .back:hover,body .bar .ib:hover,body .tg:hover svg{filter:none!important}
