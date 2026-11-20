@@ -354,3 +354,6 @@ body *{border:0!important;box-shadow:none!important}
 body *,body *::before,body *::after{outline:0!important}
 body *::before,body *::after{box-shadow:none!important}
 body .sheet,body .ib:hover,body .back:hover,body .bar .ib:hover,body .tg:hover svg{filter:none!important}
+
+/* ---- Botones de música y efectos: arriba a la izquierda (igual en los 12 juegos) ---- */
+body .adock{position:fixed!important;left:14px!important;top:14px!important;right:auto!important;bottom:auto!important;transform:none!important;flex-direction:row!important;z-index:60}
