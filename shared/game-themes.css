@@ -357,3 +357,11 @@ body .sheet,body .ib:hover,body .back:hover,body .bar .ib:hover,body .tg:hover s
 
 /* ---- Botones de música y efectos: arriba a la izquierda (igual en los 12 juegos) ---- */
 body .adock{position:fixed!important;left:14px!important;top:14px!important;right:auto!important;bottom:auto!important;transform:none!important;flex-direction:row!important;z-index:60}
+
+/* ---- Marco común: la misma forma en los 12 juegos (cada juego conserva sus colores y fuentes) ---- */
+body[data-g] .hudbar,body[data-g] .adock,body[data-g] .toast{border-radius:20px!important;clip-path:none!important}
+body[data-g] .sheet{border-radius:24px!important;clip-path:none!important}
+body[data-g] .cta,body[data-g] .pill,body[data-g] .ab,body[data-g] .hb{border-radius:14px!important;clip-path:none!important}
+body[data-g] .tile,body[data-g] .lcard,body[data-g] .figures div{border-radius:16px!important;clip-path:none!important}
+body[data-g] .steps .n{border-radius:10px!important;clip-path:none!important}
+body[data-g] .stage canvas{border-radius:0!important}
